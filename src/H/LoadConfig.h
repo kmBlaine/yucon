@@ -15,17 +15,23 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * LoadConfig.h
+
+/* File: LoadConfig.h
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- *  Created on: Nov 18, 2016
- *      Author: kbm1271
+ * DESCRIPTION:
+ *
+ * This is the front end for the LoadConfig.c module. This allows
+ * for configurations to be loaded from files and the configurations
+ * to be easily parsed and changed in format without changing the
+ * entire program.
  */
 
 #ifndef H_LOADCONFIG_H_
 #define H_LOADCONFIG_H_
 
-#include "UnitList.h"
+#include "../H/UnitList.h"
 #define MAX_LINE_LENGTH 512
 
 UnitNode *load_units_list();

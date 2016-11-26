@@ -15,15 +15,23 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * UnitList.h
+
+/* File: UnitList.h
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- * Contains the abstract declarations for the units and the linked list of units for the program
- * Links the UnitList.c file
+ * DESCRIPTION:
+ *
+ * Public declarations for the UnitList.c module. Serves as a front end
+ * to the database of units so that the method of unit storage may be
+ * changed in the future if deemed necessary so that minimal code modification
+ * is necessary.
  */
 
 #ifndef H_UNITLIST_H_
 #define H_UNITLIST_H_
+
+#include "../H/GlobalDefines.h"
 
 typedef struct Unit Unit;
 struct Unit

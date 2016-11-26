@@ -15,20 +15,24 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * LoadConfig.c
+
+/* File: LoadConfig.c
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- *  Created on: Nov 18, 2016
- *      Author: kbm1271
+ * DESCRIPTION:
+ *
+ * This module handles the loading of configurations from files. This
+ * includes program configrations as well as building the units list
+ * from the data files.
  */
 
-#include "H/LoadConfig.h"
+#include "../H/LoadConfig.h"
+#include "../H/UnitList.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-#include "H/GlobalDefines.h"
 
 /* names_count
  *
@@ -43,7 +47,7 @@ int names_count( char *line )
 {
 	int count = 1; //assume at least one name
 
-	for ( int pos = 0; line[pos] != NULL; pos++ )
+	for ( int pos = 0; line[pos] != NULL_CHAR; pos++ )
 	{
 		if ( line[pos] == ',' )
 		{
@@ -69,13 +73,13 @@ char *str_safe_copy( char *str )
 	int str_size = 1; //loop does not count null terminator.
 
 	//find string size and replace newline character
-	for ( int pos = 0; str[pos] != NULL; pos++ )
+	for ( int pos = 0; str[pos] != NULL_CHAR; pos++ )
 	{
 		str_size++;
 
 		if ( str[pos] == '\n' )
 		{
-			str[pos] = NULL;
+			str[pos] = NULL_CHAR;
 		}
 	}
 
@@ -83,7 +87,7 @@ char *str_safe_copy( char *str )
 	char *str_copy = calloc( str_size, sizeof(char) );
 
 	//copy string
-	for ( int pos = 0; str[pos] != NULL; pos++ )
+	for ( int pos = 0; str[pos] != NULL_CHAR; pos++ )
 	{
 		str_copy[pos] = str[pos];
 	}
@@ -134,44 +138,54 @@ char **get_names_list( char *str )
  */
 int get_unit_type( char *str )
 {
-	if ( strncmp( str, "length", 6) == 0 )
+	if ( strncmp( str, length, 6) == 0 )
 	{
 		return LENGTH;
 	}
 
-	if ( strncmp( str, "volume", 6) == 0 )
+	if ( strncmp( str, volume, 6) == 0 )
 	{
 		return VOLUME;
 	}
 
-	if ( strncmp( str, "area", 4) == 0 )
+	if ( strncmp( str, area, 4) == 0 )
 	{
 		return AREA;
 	}
 
-	if ( strncmp( str, "energy", 6) == 0 )
+	if ( strncmp( str, energy, 6) == 0 )
 	{
 		return ENERGY;
 	}
 
-	if ( strncmp( str, "power", 5) == 0 )
+	if ( strncmp( str, power, 5) == 0 )
 	{
 		return POWER;
 	}
 
-	if ( strncmp( str, "mass", 4) == 0 )
+	if ( strncmp( str, mass, 4) == 0 )
 	{
 		return MASS;
 	}
 
-	if ( strncmp( str, "force", 5) == 0 )
+	if ( strncmp( str, force, 5) == 0 )
 	{
 		return FORCE;
 	}
 
-	if ( strncmp( str, "torque", 6) == 0 )
+	if ( strncmp( str, torque, 6) == 0 )
 	{
 		return TORQUE;
+	}
+
+	if ( strncmp( str, speed, 5 ) == 0 )
+	{
+		return SPEED;
+	}
+
+	if ( strncmp( str, pressure, 8 ) == 0 )
+	{
+		return PRESSURE;
 	}
 
 	return -1; //return -1 on failure
@@ -193,10 +207,11 @@ UnitNode *load_units_list()
 	int end_of_list = 0;
 
 	//open config file, exit early if config file does not exist
-	FILE *units_cfg = fopen( "/home/kbm1271/units.cfg", "r" );
+	FILE *units_cfg = fopen( "/etc/yucon/units.dat", "r" );
 	if ( units_cfg == NULL )
 	{
-		return head;
+		free( head );
+		return NULL;
 	}
 
 	/* CFG file formatted in following manner.

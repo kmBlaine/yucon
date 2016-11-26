@@ -15,14 +15,20 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * Convert.c
+
+/* File: Convert.c
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- *  Created on: Nov 20, 2016
- *      Author: kbm1271
+ * DESCRIPTION:
+ *
+ * This module of the program handles the actual unit conversions and
+ * contains the functions for output formatting. This way, all modules
+ * and methods needed to do conversion can do so without needing to
+ * reimplement the conversions or formatting.
  */
 
-#include "H/Convert.h"
+#include "../H/Convert.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,7 +41,8 @@ Yucon - General purpose unit converter
  *   converts them or returns error code as appropriate
  *
  * Parameters:
- *   char *number - input value in valid double format
+ *   char *number - input string with a value in valid double format
+ *                  Ex. "65536", "3.141592654", "6.022E+23"
  *   char *unit_from_name - name of the unit to convert from
  *   char *unit_to_name - name of the unit to convert to
  *
@@ -47,7 +54,7 @@ double get_conversion( char *number, char *unit_from_name, char *unit_to_name, U
 	double input = strtod( number, &input_end );
 
 	//if trailing characters were found in the number
-	if ( input_end && (input_end[1] == NULL) )
+	if ( input_end && (input_end[1] == NULL_CHAR) )
 	{
 		return NONNUMERIC_INPUT;
 	}

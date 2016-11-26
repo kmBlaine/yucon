@@ -15,11 +15,14 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * main.c
+/* File: yucon.c
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- *  Created on: Nov 5, 2016
- *      Author: kbm1271
+ * DESCRIPTION:
+ *
+ * main method for the program. loads configurations, units, and
+ * then delegates out functionality to the program's other modules
  */
 
 
@@ -27,17 +30,44 @@ Yucon - General purpose unit converter
 #include <stdio.h>
 
 #include "H/Interpreter.h"
+#include "H/LoadConfig.h"
 
 
 int main( int argc, char *argv[] )
 {
-	if ( argc < 2 )
+	UnitNode *units_list = load_units_list();
+
+	ProgramOptions options;
+	int error_code = set_program_options( &options, argc, argv );
+
+	if ( units_list == NULL )
 	{
-		while ( interactive_mode() );
+		help( UNITS_FILE_MISSING, &options, NULL );
+		return EXIT_SUCCESS;
 	}
-	else
+
+	if ( error_code )
 	{
-		convert( argc, argv );
+		help( error_code, &options, units_list );
+		return EXIT_SUCCESS;
+	}
+
+	switch ( options.input_mode )
+	{
+	case ONE_TIME_MODE:
+		args_convert( &options, units_list );
+		break;
+
+	case BATCH_MODE:
+		batch_convert( &options, units_list );
+		break;
+
+	case INTERACTIVE_MODE:
+		interactive_mode();
+		break;
+
+	default:
+		break;
 	}
 
 	return EXIT_SUCCESS;

@@ -15,18 +15,23 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * Convert.h
+
+/* File: Convert.h
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- *  Created on: Nov 20, 2016
- *      Author: kbm1271
+ * DESCRIPTION:
+ *
+ * This is the front end for the Convert.c module. The conversion utilities
+ * and formatting are made separate so different parts of the program may
+ * use the same code for unit conversion and formatting.
  */
 
 #ifndef H_CONVERT_H_
 #define H_CONVERT_H_
 
-#include "GlobalDefines.h"
-#include "UnitList.h"
+#include "../H/GlobalDefines.h"
+#include "../H/UnitList.h"
 
 #define OUTPUT_STR_SIZE 128
 

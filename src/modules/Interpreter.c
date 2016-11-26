@@ -15,23 +15,29 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * Interpreter.c
+
+/* File: Interpreter.c
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- *  Created on: Nov 19, 2016
- *      Author: kbm1271
+ * DESCRITPTION:
+ *
+ * This module handles the interpretation of arguments given to the program
+ * on the command line and implements conversion routines to match. This
+ * partially overlaps with the task of the main() method but
+ * the Interpreter is both the back end and the principle determinant of the
+ * program's behavior. The intent is mainly to keep the main file as clean
+ * as possible and make the program easily extensible.
  */
 
-#include "H/Interpreter.h"
+#include "../H/Interpreter.h"
+#include "../H/UnitList.h"
+#include "../H/Convert.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "H/GlobalDefines.h"
-
-#define ONE_TIME_MODE      0
-#define BATCH_MODE         1
 #define STDOUT_MODE        0
 #define VERBOSE_MODE       1
 #define QUIET_MODE         2
@@ -39,53 +45,16 @@ Yucon - General purpose unit converter
 #define DESCRIPTIVE_FORMAT 1
 #define VERBOSE_FORMAT     2
 
-/* struct ProgramOptions
+/* get_type_str
  *
- * Purpose: holds the options specified by the args on the command line
- *   for easy passage to through methods
+ * Purpose: given the internal type code for a unit, returns a string
+ *   with the English name of the unit type
  *
- * Fields:
- *   char input_mode - specifies where to take input from
- *     0 - one time conversion. convert from command line args
- *     1 - batch mode. convert from input file (list of conversions)
+ * Parameters:
+ *   int unit_type - internal type code for a unit
  *
- *   char *batch_file - specifies the name of the input file to read from when in batch mode
- *     NULL - read from stdin
- *     ptr  - read from file with specified name
- *
- *   char output_mode - specifies where to write output
- *     0 - stdout mode. write output only to stdout
- *     1 - verbose mode. write output to stdout and to output file specified
- *     2 - quiet mode. write output only to output file
- *
- *   char *output_file - specifies the name of the output file to write to when in verbose or quiet mode
- *     NULL - N/A
- *     ptr  - write to file with specified name
- *
- *   char format - specifies the format of outputs
- *     0 - simple. writes number only eg. 1.1, 5, 25.4
- *     1 - descriptive. writes number and associated unit eg. 1.1 qt, 5 cm2, 25.4 mm
- *     2 - verbose. writes input and output values with units eg. 1 in = 25.4 mm, 1 in3 = 16.38 cc
- *
- *   char *last_arg - argument where options parsing left off
- *
- *   int argc - raw args count
- *
- *   char *argv[] - raw args array
+ * Returns: char* - pointer to read-only string containing english name
  */
-typedef struct ProgramOptions ProgramOptions;
-struct ProgramOptions
-{
-	char input_mode;
-	char *input_file;
-	char output_mode;
-	char *output_file;
-	char format;
-	char *last_arg;
-	int argc;
-	char **argv;
-};
-
 const char *get_type_str( int unit_type )
 {
 	switch ( unit_type )
@@ -242,6 +211,19 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 	return EXIT_SUCCESS;
 }
 
+/* help
+ *
+ * Purpose: provides the user with basic information on the
+ *   program's operation and any errors that arise when in
+ *   use.
+ *
+ * Parameters:
+ *   int error_code - internal code for the runtime error. see GlobalDefines.h
+ *   ProgramOptions *options - options that the program was run with
+ *   UnitNode *units_list - head of the list of units
+ *
+ * Returns: nothing
+ */
 void help( int error_code, ProgramOptions *options, UnitNode* units_list )
 {
 	int argc = options->argc;
@@ -300,15 +282,19 @@ void help( int error_code, ProgramOptions *options, UnitNode* units_list )
 		printf( "unable to write output file\n\n" );
 		break;
 
+	case UNITS_FILE_MISSING:
+		printf( "units.dat file missing or corrupt\n\n" );
+		break;
+
 	default:
 		break;
 	}
 
-	printf( "UCON - General Purpose Unit Converter - ALPHA\n"
+	printf( "YUCON - General Purpose Unit Converter - ALPHA\n"
 			"Usage:\n"
-			"\tucon\n"
-			"\tucon [options] #### original_unit converted_unit\n"
-			"\tucon -b [options] [input file]\n\n"
+			"\tyucon\n"
+			"\tyucon [options] #### original_unit converted_unit\n"
+			"\tyucon -b [options] [input file]\n\n"
 	);
 
 	if ( error_code == HELP_REQUESTED )
@@ -326,11 +312,11 @@ void help( int error_code, ProgramOptions *options, UnitNode* units_list )
 				"\t-v          - verbose. prints input+output values and units together\n\n"
 				"\t-h, --help  - prints this help message\n\n"
 				"Examples:\n"
-				"\tucon -v 1 in mm\n"
+				"\tyucon -v 1 in mm\n"
 				"\tConverts 1 in to mm. Output: 1 in = 25.4 mm\n\n"
-				"\tucon -b -oq output.txt input.txt\n"
+				"\tyucon -b -oq output.txt input.txt\n"
 				"\tPerforms conversions in input.txt and writes results to output.txt. No console output\n\n"
-				"THIS PROGRAM IS FREE SOFTWARE LICENSED UNDER GPLv3\n"
+				"THIS IS FREE SOFTWARE LICENSED UNDER GPLv3\n"
 				"Copyright (C) 2016 - Blaine Murphy\n"
 		);
 	}
@@ -340,11 +326,41 @@ void help( int error_code, ProgramOptions *options, UnitNode* units_list )
 	}
 }
 
+/* batch_convert
+ *
+ * Purpose: performs a batch conversion on a specified input file
+ *   Entries in input file expected to be formatted as a standard command line
+ *   conversion, one per line, like so:
+ *
+ *     25.4 mm in
+ *     3.78 liter gal
+ *     ...
+ *
+ *   any lines that cannot be interpreted will be ignored and will
+ *   result in an "Error converting this line" in the corresponding output
+ *
+ * Parameters:
+ *   ProgramOptions *options - pointer to options struct containing program
+ *                             options
+ *   UnitNode *units_list - pointer to head of units list
+ *
+ * Returns: nothing
+ */
 void batch_convert( ProgramOptions *options, UnitNode *units_list )
 {
-
+	FUNCTION_NOT_IMPLEMENTED("batch_convert");
 }
 
+/* args_convert
+ *
+ * Purpose: performs a unit conversion specified on the command line
+ *
+ * Parameters:
+ *   ProgramOptions *options - options that the program was run with
+ *   UnitNode *units_list - head of the units list
+ *
+ * Returns: nothing
+ */
 void args_convert( ProgramOptions *options, UnitNode *units_list )
 {
 	int argc = options->argc;
@@ -404,30 +420,17 @@ void args_convert( ProgramOptions *options, UnitNode *units_list )
 	free( output_str );
 }
 
+/* interactive_mode
+ *
+ * Purpose: runs an interactive terminal session for unit conversion
+ *
+ * Parameters:
+ *   none at this time
+ *
+ * Returns: Int - 0 to stop. Nonzero to continue
+ */
 int interactive_mode()
 {
+	FUNCTION_NOT_IMPLEMENTED("interactive_mode");
 	return 0;
-}
-
-void convert( int argc, char **argv )
-{
-	UnitNode *units_list = load_units_list();
-
-	ProgramOptions options;
-	int error_code = set_program_options( &options, argc, argv );
-
-	if ( error_code )
-	{
-		help( error_code, &options, units_list );
-		return;
-	}
-
-	if ( options.input_mode )
-	{
-		batch_convert( &options, units_list );
-	}
-	else
-	{
-		args_convert( &options, units_list );
-	}
 }

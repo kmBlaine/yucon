@@ -15,19 +15,22 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * UnitsList.c
+
+/* File: UnitsList.c
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- * Concrete declarations of the units and linked list of units
+ * DESCRIPTION:
  *
+ * The UnitsList.c module maintains the internal database of units.
+ * It provides methods for fetching units in a variety of ways. The
+ * intent of this module is to allow the method for internal storage
+ * of units to change while leaving the lest of the program unchanged
  */
 
-#include "H/UnitList.h"
-
+#include "../H/UnitList.h"
 #include <stdlib.h>
 #include <stdio.h>
-
-#include "H/GlobalDefines.h"
 
 void delete_names_list( char **names_list )
 {
@@ -194,7 +197,7 @@ int str_match( char *str1, char *str2 )
 	int pos = 0;
 
 	//while strings match and still more characters to check
-	while ( (match == 1) && (str1[pos] != NULL) && (str2[pos] != NULL) )
+	while ( (match == 1) && (str1[pos] != NULL_CHAR) && (str2[pos] != NULL_CHAR) )
 	{
 		//if characters at pos do not match, indicate so
 		if ( str1[pos] != str2[pos] )
@@ -207,7 +210,7 @@ int str_match( char *str1, char *str2 )
 
 	//if one string is longer than the other but the first parts match
 	//strings do not match
-	if ( (str1[pos] != NULL) || (str2[pos] != NULL) )
+	if ( (str1[pos] != NULL_CHAR) || (str2[pos] != NULL_CHAR) )
 	{
 		match = 0;
 	}
@@ -259,6 +262,15 @@ Unit *get_unit_by_name( char *name, UnitNode *head )
 	}
 }
 
+/* print_units_list
+ *
+ * Purpose: prints the units database to the console for debugging purposes
+ *
+ * Parameters:
+ *   UnitNode *head - pointer to head of the units list
+ *
+ * Returns: nothing
+ */
 void print_units_list( UnitNode *head )
 {
 	head = head->next_unit;
