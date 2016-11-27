@@ -51,6 +51,7 @@ Yucon - General purpose unit converter
 #define TORQUE   8
 #define SPEED    9
 #define PRESSURE 10
+#define TEMP     11
 
 /* Error Code defines
  *
@@ -93,6 +94,7 @@ static const char *force = "force";
 static const char *torque = "torque";
 static const char *speed = "speed";
 static const char *pressure = "pressure";
+static const char *temp = "temperature";
 //renenable unused variable warnings
 #pragma GCC diagnostic pop
 

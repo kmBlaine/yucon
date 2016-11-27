@@ -188,6 +188,11 @@ int get_unit_type( char *str )
 		return PRESSURE;
 	}
 
+	if ( strncmp( str, temp, 11) == 0 )
+	{
+		return TEMP;
+	}
+
 	return -1; //return -1 on failure
 }
 
@@ -221,17 +226,19 @@ UnitNode *load_units_list()
 	 *   names=[list of names in CSV format]
 	 *   type=[type]
 	 *   factor=[floating point value]
+	 *   offset=[floating point value]
 	 *
 	 *   ...
 	 *
-	 * names, type, and factor must appear as a cluster in that order,
+	 * names, type, factor and offset must appear as a cluster in that order,
 	 * else the unit and properties enumerated on these lines will be discarded.
-	 * all lines that do not begin with 'names=', 'type=', or 'factor=' will
+	 * all lines that do not begin with 'names=', 'type=', 'factor=', or 'offset=' will
 	 * be interpreted as a comment.
 	 * for instance if a unit was formatted in the file as:
 	 *   names=inch,in
 	 *   factor=25.4
 	 *   type=length
+	 *   offset=0
 	 *
 	 * all lines would be ignored and discarded. similarly white space or comments
 	 * breaking a valid sequence will cause the unit to be discarded. Ex:
@@ -239,6 +246,7 @@ UnitNode *load_units_list()
 	 *   this is a comment
 	 *   type=[type]
 	 *   factor=[factor]
+	 *   offset=[offset]
 	 *
 	 * this unit would be discarded.
 	 */
@@ -250,6 +258,7 @@ UnitNode *load_units_list()
 		char **names_list = NULL;
 		int unit_type = -1;
 		double conversion_factor = 0;
+		double offset = 0;
 
 		char line_buffer[MAX_LINE_LENGTH]; //buffer to read file into
 		fgets( line_buffer, MAX_LINE_LENGTH, units_cfg );
@@ -292,11 +301,25 @@ UnitNode *load_units_list()
 			continue;
 		}
 
+		fgets( line_buffer, MAX_LINE_LENGTH, units_cfg );
+
+		//if offset line, get offset. else delete names to prevent memory leak
+		if ( strncmp( line_buffer, "offset=", 7) == 0 )
+		{
+			offset = atof( line_buffer + 7 );
+		}
+		else
+		{
+			delete_names_list( names_list );
+			continue;
+		}
+
 		//create new unit and add it to list
 		Unit *next_unit = __NEW_UNIT;
 		next_unit->unit_name = names_list;
 		next_unit->unit_type = unit_type;
 		next_unit->conversion_factor = conversion_factor;
+		next_unit->offset = offset;
 
 		add_unit( next_unit, end_of_list++, head );
 	}

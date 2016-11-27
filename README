@@ -1,8 +1,53 @@
 Yucon - A general-purpose unit converter
+================================================================================
 
-DISCLAIMER: Yucon's use case is intended to be GENERAL PURPOSE.
-It should not be confused as a program designed for specialized
-and/or rigourous scientific or engineering applications. Per the terms of GPLv3
-under which this program is licensed, this program is provided
-with the hope that it will be useful, BUT WITH ASOLUTELY NO
-WARRANTY! Use at your own risk and discretion.
+INTRODUCTION:
+Yucon is a simple but feature-rich unit conversion utility built especially for
+use on the command line. It was designed with three things in mind:
+  1. Empower the user. Make the program as intuitive as possible and provide a
+     broad feature set.
+  2. Modular design. Yucon is designed to be easily extensible. For instance,
+     units are loaded procedurally from a file rather than being built into the
+     program.
+  3. Freedom. Yucon is free and open source to make it as useful as possible
+
+These are some of the features that Yucon supports:
+  -  Direct conversion of units on the command line:
+     Ex. $ yucon 25.4 mm in --> converts 25.4 millimeters to inches
+  -  Interactive terminal mode
+  -  Batch conversion from files
+
+DISCLAIMER: Yucon's use case is intended to be GENERAL PURPOSE. It should not be
+confused as a program designed for specialized and/or rigourous scientific or
+engineering applications. Per the terms of GPLv3 under which this program is
+licensed, this program is provided with the hope that it will be useful, BUT
+WITH ASOLUTELY NO WARRANTY! Use at your own risk and discretion.
+
+--------------------------------------------------------------------------------
+1 - INSTALLATION
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+2 - USAGE
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+3 - BATCH INPUT FILES
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+4 - OUTPUT FILES
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+5 - YUCON'S CONFIGURATION FILES
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+6 - OTHER FEATURES
+--------------------------------------------------------------------------------

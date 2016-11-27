@@ -48,19 +48,19 @@ Yucon - General purpose unit converter
  *
  * Returns: Double - positive on conversion success. negative if error
  */
-double get_conversion( char *number, char *unit_from_name, char *unit_to_name, UnitNode* units_list )
+int get_conversion( char *number, char *unit_from_name, char *unit_to_name, double *conversion, UnitNode* units_list )
 {
 	char *input_end = NULL;
 	double input = strtod( number, &input_end );
 
 	//if trailing characters were found in the number
-	if ( input_end && (input_end[1] == NULL_CHAR) )
+	if ( input_end && (input_end[0] != NULL_CHAR) )
 	{
 		return NONNUMERIC_INPUT;
 	}
 
-	//if negative, zero, or unrecognized input
-	if ( input <= 0 || input == NAN || input == INFINITY )
+	//if negative, zero, out of range or unrecognized input
+	if ( (input <= 0) || (input == NAN) || (input == INFINITY) )
 	{
 		return INVALID_INPUT;
 	}
@@ -86,7 +86,11 @@ double get_conversion( char *number, char *unit_from_name, char *unit_to_name, U
 	}
 
 	//else return conversion
-	return input * ( unit_from->conversion_factor / unit_to->conversion_factor );
+	*conversion = ( input + unit_from->offset )
+			* ( unit_from->conversion_factor / unit_to->conversion_factor )
+			- unit_to->offset;
+
+	return EXIT_SUCCESS;
 }
 
 char *simple_output_str( double conversion )

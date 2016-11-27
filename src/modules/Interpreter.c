@@ -83,6 +83,15 @@ const char *get_type_str( int unit_type )
 	case TORQUE:
 		return torque;
 
+	case SPEED:
+		return speed;
+
+	case PRESSURE:
+		return pressure;
+
+	case TEMP:
+		return temp;
+
 	default:
 		return length;
 	}
@@ -366,11 +375,12 @@ void args_convert( ProgramOptions *options, UnitNode *units_list )
 	int argc = options->argc;
 	char **argv = options->argv;
 
-	double conversion = get_conversion( argv[argc-3], argv[argc-2], argv[argc-1], units_list );
+	double conversion = 0;
+	int error_code = get_conversion( argv[argc-3], argv[argc-2], argv[argc-1], &conversion, units_list );
 
-	if ( conversion < 0 )
+	if ( error_code )
 	{
-		help( (int)(conversion), options, units_list );
+		help( error_code, options, units_list );
 		return;
 	}
 

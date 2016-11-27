@@ -39,6 +39,7 @@ struct Unit
 	char **unit_name;
 	int unit_type;
 	double conversion_factor;
+	double offset;
 };
 
 typedef struct UnitNode UnitNode;
