@@ -78,8 +78,8 @@ struct ProgramOptions
 
 int set_program_options( ProgramOptions*, int, char** );
 int interactive_mode();
-void batch_convert( ProgramOptions*, UnitNode* );
-void args_convert( ProgramOptions*, UnitNode* );
-void help( int, ProgramOptions*, UnitNode* );
+void batch_convert( ProgramOptions* );
+void args_convert( ProgramOptions* );
+void help( int, ProgramOptions* );
 
 #endif /* H_INTERPRETER_H_ */

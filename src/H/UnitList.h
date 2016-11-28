@@ -55,13 +55,13 @@ struct UnitNode
 void delete_names_list( char** );
 void delete_unit( Unit* );
 Unit *delete_unit_node( UnitNode* );
-void delete_units_list( UnitNode* );
+void delete_units_list();
 
-int add_unit( Unit*, int, UnitNode* );
-Unit *remove_unit( int, UnitNode* );
-void print_units_list( UnitNode* );
+int add_unit( Unit*, int );
+Unit *remove_unit( int );
+void print_units_list();
 
-Unit *get_unit_by_name( char*, UnitNode* );
+Unit *get_unit_by_name( char* );
 
 #endif /* H_UNITLIST_H_ */
 

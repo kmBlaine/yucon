@@ -35,7 +35,7 @@ Yucon - General purpose unit converter
 
 #define OUTPUT_STR_SIZE 128
 
-int get_conversion( char*, char*, char*, double*, UnitNode* );
+int get_conversion( char*, char*, char*, double* );
 
 char *simple_output_str( double );
 char *descriptive_output_str( double, char* );

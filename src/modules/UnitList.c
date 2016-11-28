@@ -32,6 +32,8 @@ Yucon - General purpose unit converter
 #include <stdlib.h>
 #include <stdio.h>
 
+UnitNode list_handle;
+
 void delete_names_list( char **names_list )
 {
 	for ( int pos = 0; names_list[pos] != NULL; pos++ )
@@ -83,13 +85,15 @@ Unit *delete_unit_node( UnitNode *unit_node )
  *
  * Returns: nothing
  */
-void delete_units_list( UnitNode *head_node )
+void delete_units_list()
 {
-	while ( head_node != NULL )
+	UnitNode *head = list_handle.next_unit;
+
+	while ( head )
 	{
-		UnitNode *next_node = head_node->next_unit; //copy pointer to next node
-		delete_unit( delete_unit_node( head_node ) ); //delete node
-		head_node = next_node;
+		UnitNode *next = head->next_unit; //copy pointer to next node
+		delete_unit( delete_unit_node( head ) ); //delete node
+		head = next;
 	}
 }
 
@@ -101,21 +105,14 @@ void delete_units_list( UnitNode *head_node )
  * Paremeters:
  *   unit - unit to add
  *   index - index in list to add at
- *   head - head of the list to add to
  *
  * Returns: Int - 1 on success. 0 on failure
  */
-int add_unit( Unit* unit, int index, UnitNode* head )
+int add_unit( Unit* unit, int index )
 {
-	//check head for NULL to prevent segfault
-	if ( head == NULL )
-	{
-		return 0;
-	}
-
 	//list uses dummy head node variant. pump the while loop to account for this
-	UnitNode *prev = head;
-	head = head->next_unit;
+	UnitNode *prev = &list_handle;
+	UnitNode *head = list_handle.next_unit;
 
 	//find position to add at
 	while ( (index != 0) && head )
@@ -146,21 +143,14 @@ int add_unit( Unit* unit, int index, UnitNode* head )
  *
  * Parameters:
  *   int index - index to remove unit from
- *   UnitNode *head - pointer to list to remove from
  *
  * Returns: Unit* - pointer to Unit removed. NULL if unsuccessful
  */
-Unit *remove_unit( int index, UnitNode* head )
+Unit *remove_unit( int index )
 {
-	//if invalid list, return to prevent segfault
-	if ( head == NULL )
-	{
-		return NULL;
-	}
-
 	//list is dummy head node variant, pump loop to account for this
-	UnitNode *prev = head;
-	head = head->next_unit;
+	UnitNode *prev = &list_handle;
+	UnitNode *head = list_handle.next_unit;
 
 	//while not at correct position, find correct position to remove from
 	while ( (index != 0) && head )
@@ -229,14 +219,9 @@ int str_match( char *str1, char *str2 )
  *
  * Returns: Unit - Unit with matching name if found. Null pointer otherwise.
  */
-Unit *get_unit_by_name( char *name, UnitNode *head )
+Unit *get_unit_by_name( char *name )
 {
-	if ( head == NULL )
-	{
-		return NULL;
-	}
-
-	head = head->next_unit;
+	UnitNode *head = list_handle.next_unit;
 	Unit *unit = NULL;
 	int found = 0;
 
@@ -271,9 +256,9 @@ Unit *get_unit_by_name( char *name, UnitNode *head )
  *
  * Returns: nothing
  */
-void print_units_list( UnitNode *head )
+void print_units_list()
 {
-	head = head->next_unit;
+	UnitNode *head = list_handle.next_unit;
 
 	while ( head )
 	{

@@ -233,11 +233,8 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
  *
  * Returns: nothing
  */
-void help( int error_code, ProgramOptions *options, UnitNode* units_list )
+void help( int error_code, ProgramOptions *options )
 {
-	int argc = options->argc;
-	char **argv = options->argv;
-
 	if ( error_code != HELP_REQUESTED )
 	{
 		printf( "Error: ");
@@ -265,25 +262,25 @@ void help( int error_code, ProgramOptions *options, UnitNode* units_list )
 		break;
 
 	case NONNUMERIC_INPUT:
-		printf( "unrecognized value: %s\n\n", argv[argc-3] );
+		printf( "unrecognized value: %s\n\n", options->argv[options->argc-3] );
 		break;
 
 	case INVALID_INPUT:
-		printf( "out of range or unrecognized value: %s\n\n", argv[argc-3] );
+		printf( "out of range or unrecognized value: %s\n\n", options->argv[options->argc-3] );
 		break;
 
 	case UNIT_FROM_NF:
-		printf( "converting from unknown unit: %s\n\n", argv[argc-2] );
+		printf( "converting from unknown unit: %s\n\n", options->argv[options->argc-2] );
 		break;
 
 	case UNIT_TO_NF:
-		printf( "converting to unknown unit: %s\n\n", argv[argc-1] );
+		printf( "converting to unknown unit: %s\n\n", options->argv[options->argc-1] );
 		break;
 
 	case INCOMPATIBLE_UNITS:
 		printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
-				get_type_str( get_unit_by_name( argv[argc-2], units_list )->unit_type ),
-				get_type_str( get_unit_by_name( argv[argc-1], units_list )->unit_type )
+				get_type_str( get_unit_by_name( options->argv[options->argc-2] )->unit_type ),
+				get_type_str( get_unit_by_name( options->argv[options->argc-1] )->unit_type )
 		);
 		break;
 
@@ -355,7 +352,7 @@ void help( int error_code, ProgramOptions *options, UnitNode* units_list )
  *
  * Returns: nothing
  */
-void batch_convert( ProgramOptions *options, UnitNode *units_list )
+void batch_convert( ProgramOptions *options )
 {
 	FUNCTION_NOT_IMPLEMENTED("batch_convert");
 }
@@ -370,17 +367,17 @@ void batch_convert( ProgramOptions *options, UnitNode *units_list )
  *
  * Returns: nothing
  */
-void args_convert( ProgramOptions *options, UnitNode *units_list )
+void args_convert( ProgramOptions *options )
 {
 	int argc = options->argc;
 	char **argv = options->argv;
 
 	double conversion = 0;
-	int error_code = get_conversion( argv[argc-3], argv[argc-2], argv[argc-1], &conversion, units_list );
+	int error_code = get_conversion( argv[argc-3], argv[argc-2], argv[argc-1], &conversion );
 
 	if ( error_code )
 	{
-		help( error_code, options, units_list );
+		help( error_code, options );
 		return;
 	}
 
@@ -415,13 +412,13 @@ void args_convert( ProgramOptions *options, UnitNode *units_list )
 
 		if ( output_file == NULL )
 		{
-			help( OUTPUT_FILE_ERR, options, units_list );
+			help( OUTPUT_FILE_ERR, options );
 			return;
 		}
 
 		if ( fputs( output_str, output_file ) == EOF )
 		{
-			help( OUTPUT_FILE_ERR, options, units_list );
+			help( OUTPUT_FILE_ERR, options );
 		}
 
 		fclose( output_file );

@@ -35,31 +35,31 @@ Yucon - General purpose unit converter
 
 int main( int argc, char *argv[] )
 {
-	UnitNode *units_list = load_units_list();
-
-	ProgramOptions options;
-	int error_code = set_program_options( &options, argc, argv );
-
-	if ( units_list == NULL )
-	{
-		help( UNITS_FILE_MISSING, &options, NULL );
-		return EXIT_SUCCESS;
-	}
+	int error_code = load_units_list();
 
 	if ( error_code )
 	{
-		help( error_code, &options, units_list );
+		help( error_code, NULL );
+		return EXIT_SUCCESS;
+	}
+
+	ProgramOptions options;
+	error_code = set_program_options( &options, argc, argv );
+
+	if ( error_code )
+	{
+		help( error_code, &options );
 		return EXIT_SUCCESS;
 	}
 
 	switch ( options.input_mode )
 	{
 	case ONE_TIME_MODE:
-		args_convert( &options, units_list );
+		args_convert( &options );
 		break;
 
 	case BATCH_MODE:
-		batch_convert( &options, units_list );
+		batch_convert( &options );
 		break;
 
 	case INTERACTIVE_MODE:
@@ -69,6 +69,8 @@ int main( int argc, char *argv[] )
 	default:
 		break;
 	}
+
+	delete_units_list();
 
 	return EXIT_SUCCESS;
 }

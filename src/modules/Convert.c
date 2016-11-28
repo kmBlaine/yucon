@@ -48,7 +48,7 @@ Yucon - General purpose unit converter
  *
  * Returns: Double - positive on conversion success. negative if error
  */
-int get_conversion( char *number, char *unit_from_name, char *unit_to_name, double *conversion, UnitNode* units_list )
+int get_conversion( char *number, char *unit_from_name, char *unit_to_name, double *conversion )
 {
 	char *input_end = NULL;
 	double input = strtod( number, &input_end );
@@ -65,8 +65,8 @@ int get_conversion( char *number, char *unit_from_name, char *unit_to_name, doub
 		return INVALID_INPUT;
 	}
 
-	Unit *unit_from = get_unit_by_name( unit_from_name, units_list );
-	Unit *unit_to = get_unit_by_name( unit_to_name, units_list );
+	Unit *unit_from = get_unit_by_name( unit_from_name );
+	Unit *unit_to = get_unit_by_name( unit_to_name );
 
 	//if the units weren't found, return appropriate error
 	if ( unit_from == NULL )

@@ -61,7 +61,7 @@ int names_count( char *line )
 /* str_safe_copy
  *
  * Purpose: safely copies a string. the given string will be copied to
- *   a persistent block of memory
+ *   a non-volatile block of memory
  *
  * Parameters:
  *   char *str - string to copy
@@ -73,21 +73,16 @@ char *str_safe_copy( char *str )
 	int str_size = 1; //loop does not count null terminator.
 
 	//find string size and replace newline character
-	for ( int pos = 0; str[pos] != NULL_CHAR; pos++ )
+	for ( int pos = 0; (str[pos] != NULL_CHAR) && (str[pos] != '\n'); pos++ )
 	{
 		str_size++;
-
-		if ( str[pos] == '\n' )
-		{
-			str[pos] = NULL_CHAR;
-		}
 	}
 
 	//allocate block of memory to copy to
 	char *str_copy = calloc( str_size, sizeof(char) );
 
 	//copy string
-	for ( int pos = 0; str[pos] != NULL_CHAR; pos++ )
+	for ( int pos = 0; (str[pos] != NULL_CHAR) && (str[pos] != '\n'); pos++ )
 	{
 		str_copy[pos] = str[pos];
 	}
@@ -121,7 +116,7 @@ char **get_names_list( char *str )
 		pos++;
 	}
 
-	names_list[pos+1] = NULL; //terminate the pointer array
+	names_list[pos] = NULL; //terminate the pointer array
 
 	return names_list;
 }
@@ -205,18 +200,15 @@ int get_unit_type( char *str )
  *
  * Returns: UnitNode* - pointer to head of list
  */
-UnitNode *load_units_list()
+int load_units_list()
 {
-	//create head of the list
-	UnitNode *head = __NEW_UNIT_NODE;
 	int end_of_list = 0;
 
 	//open config file, exit early if config file does not exist
 	FILE *units_cfg = fopen( "/etc/yucon/units.dat", "r" );
 	if ( units_cfg == NULL )
 	{
-		free( head );
-		return NULL;
+		return UNITS_FILE_MISSING;
 	}
 
 	/* CFG file formatted in following manner.
@@ -321,8 +313,10 @@ UnitNode *load_units_list()
 		next_unit->conversion_factor = conversion_factor;
 		next_unit->offset = offset;
 
-		add_unit( next_unit, end_of_list++, head );
+		add_unit( next_unit, end_of_list++ );
 	}
 
-	return head;
+	fclose( units_cfg );
+
+	return EXIT_SUCCESS;
 }
