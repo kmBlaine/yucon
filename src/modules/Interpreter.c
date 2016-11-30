@@ -179,6 +179,11 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 			{
 				options->format = VERBOSE_FORMAT;
 			}
+			//FIX THIS! HORRIBLE LOGIC STRUCTURE! 30 NOV 2016
+			else if ( atof(argv[arg]) && ((argc - arg) == 3) && (options->input_mode != BATCH_MODE) )
+			{
+				break;
+			}
 			else
 			{
 				return UNRECOGNIZED_ARG; //else unrecognized arg. error

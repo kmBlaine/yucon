@@ -60,7 +60,7 @@ int get_conversion( char *number, char *unit_from_name, char *unit_to_name, doub
 	}
 
 	//if negative, zero, out of range or unrecognized input
-	if ( (input <= 0) || (input == NAN) || (input == INFINITY) )
+	if ( (input == NAN) || (input == INFINITY) )
 	{
 		return INVALID_INPUT;
 	}
