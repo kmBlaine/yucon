@@ -1,3 +1,16 @@
+base units used in this file:
+	length: mm
+	volume: ml
+	area:   cm2
+	energy: J
+	power:  W
+	mass:   g
+	force:  N
+	torque: Nm
+	speed:  cm/s
+	pressure: Pa
+	temp:   K
+
 INCH
 names=inch,in
 type=length
@@ -190,26 +203,234 @@ type=area
 factor=10000000000
 offset=0
 
+JOULE
+names=joule,J
+type=energy
+factor=1
+offset=0
+
+ELECTRON VOLT
+names=electron-volt,eV,ev
+type=energy
+factor=1.602176565E-19
+offset=0
+
+KILOWATT HOUR
+names=kilowatt-hour,kWh
+type=energy
+factor=3600000
+offset=0
+
+BRITISH THERMAL UNIT (IT)
+names=british-thermal-unit,btu,BTU
+type=energy
+factor=1055.05585262
+offset=0
+
+CALORIE (THERMOCHEMICAL)
+names=calorie,cal
+type=energy
+factor=4.184
+offset=0
+
+KILOCALORIE (FOOD CALORIE)
+names=kilocalorie,food-calorie,kcal
+type=energy
+factor=4184
+offset=0
+
+WATT
+names=watt,W
+type=power
+factor=1
+offset=0
+
+KILOWATT
+names=kilowatt,kW
+type=power
+factor=1000
+offset=0
+
+HORSEPOWER (MECHANICAL)
+names=horsepower,hp
+type=power
+factor=745.7
+offset=0
+
+METRIC HORSEPOWER
+names=metric-horsepower,ps
+type=power
+factor=735.49875
+offset=0
+
+OUNCE (AVOIRDUPOIS)
+names=ounce,oz
+type=mass
+factor=28.349523125
+offset=0
+
+GRAIN (AVOIRDUPOIS)
+names=grain,gr
+type=mass
+factor=64.79891E-3
+offset=0
+
+POUND MASS (AVOIRDUPOIS)
+names=pound-mass,pound,lb,lbm
+type=mass
+factor=453.59237
+offset=0
+
+TON (US SHORT TON)
+names=short-ton,ton
+type=mass
+factor=907184.74
+
+LONG TON
+names=long-ton
+type=mass
+factor=1016046.9088
+offset=0
+
+MILLIGRAM
+names=milligram,mg
+type=mass
+factor=0.001
+offset=0
+
+GRAM
+names=gram,g
+type=mass
+factor=1
+offset=0
+
+KILOGRAM
+names=kilogram,kg
+type=mass
+factor=1000
+offset=0
+
+TONNE (METRIC TON)
+names=metric-ton,tonne
+type=mass
+factor=1000000
+offset=0
+
+POUND FORCE
+names=pound-force,lbf
+type=force
+factor=4.4482216152605
+offset=0
+
+NEWTON
+names=newton,N
+type=force
+factor=1
+offset=0
+
+KILOGRAM FORCE
+names=kilogram-force,kgf
+type=force
+factor=9.80665
+offset=0
+
+POUND FOOT (TORQUE)
+names=pound-foot,lbft,lb-ft
+type=torque
+factor=1.35581795
+offset=0
+
+NEWTON METER
+names=newton-meter,Nm,N-m
+type=speed
+factor=1
+offset=0
+
+FEET PER SECOND
+names=feet-per-second,ftps
+type=speed
+factor=30.48
+offset=0
+
+MILES PER HOUR
+names=mile-per-hour,mph
+type=speed
+factor=44.704
+offset=0
+
+KNOTS
+names=knot,kn
+type=speed
+factor=51.4444444444444
+offset=0
+
+METERS PER SECOND
+names=meter-per-second,mps
+type=speed
+factor=100
+offset=0
+
+KILOMETERS PER HOUR
+names=kilometer-per-hour,kmph
+type=speed
+factor=27.7777777777778
+offset=0
+
+PSI
+names=pound-per-square-inch,psi
+type=pressure
+factor=6894.757
+offset=0
+
+MILLIMETERS OF MERCURY
+names=millimeter-of-mercury,mmHg
+type=pressure
+factor=133.322387415
+offset=0
+
+BAR
+names=bar
+type=pressure
+factor=100000
+offset=0
+
+PASCAL
+names=pascal,Pa,pa
+type=pressure
+factor=1
+offset=0
+
+KILOPASCAL
+names=kilopascal,kpa,kPa
+type=pressure
+factor=1000
+offset=0
+
+ATMOSPHERE
+names=atmosphere,atm
+type=pressure
+factor=101325
+
 CELCIUS
-names=celcius,c
+names=celcius,C
 type=temperature
 factor=1
-offset=273
+offset=273.15
 
 FAHRENHEIT
-names=fahrenheit,f
+names=fahrenheit,F
 type=temperature
 factor=0.555555555555556
-offset=459.4
+offset=459.67
 
 KELVIN
-names=kelvin,k
+names=kelvin,K
 type=temperature
 factor=1
 offset=0
 
 RANKINE
-names=rankine,ra
+names=rankine,R,Ra
 type=temperature
 factor=0.555555555555556
 offset=0
