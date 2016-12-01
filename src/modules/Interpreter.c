@@ -45,6 +45,8 @@ Yucon - General purpose unit converter
 #define DESCRIPTIVE_FORMAT 1
 #define VERBOSE_FORMAT     2
 
+#define MAX_BUFFER_SIZE 128
+
 /* get_type_str
  *
  * Purpose: given the internal type code for a unit, returns a string
@@ -128,7 +130,9 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 	options->argc = argc;
 	options->argv = argv;
 	options->input_mode = ONE_TIME_MODE;
+	options->input_file = NULL;
 	options->output_mode = STDOUT_MODE;
+	options->output_file = NULL;
 	options->format = SIMPLE_FORMAT;
 
 	//if any option is -h or --help, return HELP error code
@@ -158,7 +162,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 			{
 				options->output_mode = VERBOSE_MODE;
 				//if there are enough args, set next arg to filename
-				if ( arg < (argc - 1) ){ options->input_file = argv[++arg]; }
+				if ( arg < (argc - 1) ){ options->output_file = argv[++arg]; }
 				else { return NOT_ENOUGH_ARGS; } //else return error
 			}
 			//if quiet output file mode
@@ -337,6 +341,80 @@ void help( int error_code, ProgramOptions *options )
 	}
 }
 
+void generate_output( ProgramOptions *options, FILE *output, char **token )
+{
+	int argc = options->argc;
+	char **argv = options->argv;
+
+	char *token0;
+	char *token1;
+	char *token2;
+
+	if ( options->input_mode == BATCH_MODE )
+	{
+		token0 = token[0];
+		token1 = token[1];
+		token2 = token[2];
+	}
+	else
+	{
+		token0 = argv[argc-3];
+		token1 = argv[argc-2];
+		token2 = argv[argc-1];
+	}
+
+	double conversion = 0;
+	int error_code = get_conversion( token0, token1, token2, &conversion );
+
+	if ( error_code )
+	{
+		if ( options->input_mode != BATCH_MODE )
+		{
+			help( error_code, options );
+		}
+		return;
+	}
+
+	char *output_str = NULL;
+
+	switch ( options->format )
+	{
+	case SIMPLE_FORMAT:
+		output_str = simple_output_str( conversion );
+		break;
+
+	case DESCRIPTIVE_FORMAT:
+		output_str = descriptive_output_str( conversion, token2 );
+		break;
+
+	case VERBOSE_FORMAT:
+		output_str = verbose_output_str( conversion, token0, token1, token2 );
+		break;
+
+	default:
+		break;
+	}
+
+	if ( options->output_mode < 2 )
+	{
+		printf( "%s", output_str );
+	}
+
+	if ( options->output_mode > 0 )
+	{
+		if ( fputs( output_str, output ) == EOF )
+		{
+			if ( options->input_mode != BATCH_MODE )
+			{
+				free( output_str );
+				help( OUTPUT_FILE_ERR, options );
+			}
+		}
+	}
+
+	free( output_str );
+}
+
 /* batch_convert
  *
  * Purpose: performs a batch conversion on a specified input file
@@ -359,7 +437,55 @@ void help( int error_code, ProgramOptions *options )
  */
 void batch_convert( ProgramOptions *options )
 {
-	FUNCTION_NOT_IMPLEMENTED("batch_convert");
+	FILE *input;
+	FILE *output;
+
+	if ( options->input_file != NULL )
+	{
+		input = fopen( options->input_file, "r" );
+	}
+	else
+	{
+		input = stdin;
+	}
+
+	if ( options->output_mode > 0 )
+	{
+		output = fopen( options->output_file, "w" );
+	}
+
+	while ( feof( input ) == 0 )
+	{
+		char line_buffer[MAX_BUFFER_SIZE];
+
+		fgets( line_buffer, MAX_BUFFER_SIZE, input );
+
+		//replace newline character before proceeding
+		for ( int pos = 0; line_buffer[pos] != NULL_CHAR; pos++ )
+		{
+			if ( line_buffer[pos] == '\n' )
+			{
+				line_buffer[pos] = NULL_CHAR;
+				break;
+			}
+		}
+
+		char *token[3];
+		token[0] = NULL;
+		token[1] = NULL;
+		token[2] = NULL;
+
+		token[0] = strtok( line_buffer, " " );
+		token[1] = strtok( NULL, " " );
+		token[2] = strtok( NULL, " " );
+
+		if ( (token[0] == NULL) || (token[1] == NULL) || (token[2] == NULL) )
+		{
+			continue;
+		}
+
+		generate_output( options, output, token );
+	}
 }
 
 /* args_convert
@@ -368,68 +494,30 @@ void batch_convert( ProgramOptions *options )
  *
  * Parameters:
  *   ProgramOptions *options - options that the program was run with
- *   UnitNode *units_list - head of the units list
  *
  * Returns: nothing
  */
 void args_convert( ProgramOptions *options )
 {
-	int argc = options->argc;
-	char **argv = options->argv;
+	FILE *output;
 
-	double conversion = 0;
-	int error_code = get_conversion( argv[argc-3], argv[argc-2], argv[argc-1], &conversion );
-
-	if ( error_code )
+	if ( options->output_mode > STDOUT_MODE )
 	{
-		help( error_code, options );
-		return;
-	}
+		output = fopen( options->input_file, "w" );
 
-	char *output_str = NULL;
-
-	switch ( options->format )
-	{
-	case SIMPLE_FORMAT:
-		output_str = simple_output_str( conversion );
-		break;
-
-	case DESCRIPTIVE_FORMAT:
-		output_str = descriptive_output_str( conversion, argv[argc-1] );
-		break;
-
-	case VERBOSE_FORMAT:
-		output_str = verbose_output_str( conversion, argv[argc-3], argv[argc-2], argv[argc-1] );
-		break;
-
-	default:
-		break;
-	}
-
-	if ( options->output_mode < 2 )
-	{
-		printf( "%s", output_str );
-	}
-
-	if ( options->output_mode > 0 )
-	{
-		FILE *output_file = fopen( options->input_file, "w" );
-
-		if ( output_file == NULL )
+		if ( output == NULL )
 		{
 			help( OUTPUT_FILE_ERR, options );
 			return;
 		}
-
-		if ( fputs( output_str, output_file ) == EOF )
-		{
-			help( OUTPUT_FILE_ERR, options );
-		}
-
-		fclose( output_file );
 	}
 
-	free( output_str );
+	generate_output( options, output, NULL );
+
+	if ( options->output_mode > STDOUT_MODE )
+	{
+		fclose( output );
+	}
 }
 
 /* interactive_mode

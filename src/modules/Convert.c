@@ -97,7 +97,7 @@ char *simple_output_str( double conversion )
 {
 	char *str = calloc( OUTPUT_STR_SIZE, sizeof(char) );
 
-	sprintf( str, "%g", conversion );
+	sprintf( str, "%g\n", conversion );
 
 	return str;
 }
@@ -106,7 +106,7 @@ char *descriptive_output_str( double conversion, char *unit_name )
 {
 	char *str = calloc( OUTPUT_STR_SIZE, sizeof(char) );
 
-	sprintf( str, "%g %s", conversion, unit_name );
+	sprintf( str, "%g %s\n", conversion, unit_name );
 
 	return str;
 }
@@ -115,7 +115,7 @@ char *verbose_output_str( double conversion, char *orig_val, char *unit_from_nam
 {
 	char *str = calloc( OUTPUT_STR_SIZE, sizeof(char) );
 
-	sprintf( str, "%g %s = %g %s", atof( orig_val ), unit_from_name, conversion, unit_to_name );
+	sprintf( str, "%g %s = %g %s\n", atof( orig_val ), unit_from_name, conversion, unit_to_name );
 
 	return str;
 }
