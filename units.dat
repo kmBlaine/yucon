@@ -342,7 +342,7 @@ offset=0
 
 NEWTON METER
 names=newton-meter,Nm,N-m
-type=speed
+type=torque
 factor=1
 offset=0
 

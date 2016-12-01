@@ -44,6 +44,8 @@ Yucon - General purpose unit converter
 #define SIMPLE_FORMAT      0
 #define DESCRIPTIVE_FORMAT 1
 #define VERBOSE_FORMAT     2
+#define TRY_ARGS_CONVERT   0xD9 //this value was chosen because it is unlikely error codes will ever reach this high
+                                //...and because District 9 is one of my favorite movies :)
 
 #define MAX_BUFFER_SIZE 128
 
@@ -99,6 +101,50 @@ const char *get_type_str( int unit_type )
 	}
 }
 
+/* check_nondas_arg
+ *
+ * Purpose: checks if nonspecial arguments appear in an expected way and
+ *   returns an appropriate action code. this avoids duplicated code for properly
+ *   interpreting negative versus non-negative conversions
+ *
+ * Parameters:
+ *   ProgramOptions *options - pointer to program runtime options struct
+ *   int arg - arg to start checking at
+ *
+ * Returns: 0 or TRY_ARGS_CONVER - no error. Nonzero int for error.
+ */
+int check_nondash_arg( ProgramOptions *options, int arg )
+{
+	if ( options->input_mode == BATCH_MODE )
+	{
+		//if exactly one argument left, interpret as input file name
+		if ( arg == (options->argc - 1) )
+		{
+			options->input_file = options->argv[arg];
+			return EXIT_SUCCESS;
+		}
+		//loop will not reach this point if args left = 0
+		//if we reached this point, too many args
+		else
+		{
+			return TOO_MANY_ARGS;
+		}
+	}
+	//if in one time mode, and three args left, try to convert
+	else if ( (options->argc - arg) == 3 )
+	{
+		return TRY_ARGS_CONVERT;
+	}
+	//if there are more than three args, not possible. too many args
+	else if ( (options->argc - arg) > 3 )
+	{
+		return UNRECOGNIZED_ARG;
+	}
+	else
+	{
+		return NOT_ENOUGH_ARGS;
+	}
+}
 
 /* set_program_options
  *
@@ -183,10 +229,19 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 			{
 				options->format = VERBOSE_FORMAT;
 			}
-			//FIX THIS! HORRIBLE LOGIC STRUCTURE! 30 NOV 2016
-			else if ( atof(argv[arg]) && ((argc - arg) == 3) && (options->input_mode != BATCH_MODE) )
+			//arg may simply be a negative value. check it as a non-special arg
+			else if ( atof(argv[arg]) )
 			{
-				break;
+				int error_code = check_nondash_arg( options, arg );
+
+				if ( error_code == TRY_ARGS_CONVERT )
+				{
+					break;
+				}
+				else if ( error_code )
+				{
+					return error_code;
+				}
 			}
 			else
 			{
@@ -195,33 +250,15 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 		}
 		else //else if non dash argument
 		{
-			if ( options->input_mode == BATCH_MODE )
-			{
-				//if exactly one argument left, interpret as input file name
-				if ( arg == (argc - 1) )
-				{
-					options->input_file = argv[arg];
-				}
-				//loop will not reach this point if args left = 0
-				//if we reached this point, too many args
-				else
-				{
-					return TOO_MANY_ARGS;
-				}
-			}
-			//if in one time mode, and three args left, try to convert
-			else if ( (argc - arg) == 3 )
+			int error_code = check_nondash_arg( options, arg );
+
+			if ( error_code == TRY_ARGS_CONVERT )
 			{
 				break;
 			}
-			//if there are more than three args, not possible. too many args
-			else if ( (argc - arg) > 3 )
+			else if ( error_code )
 			{
-				return UNRECOGNIZED_ARG;
-			}
-			else
-			{
-				return NOT_ENOUGH_ARGS;
+				return error_code;
 			}
 		}
 	}
@@ -301,6 +338,10 @@ void help( int error_code, ProgramOptions *options )
 		printf( "units.dat file missing or corrupt\n\n" );
 		break;
 
+	case INPUT_FILE_ERR:
+		printf( "unable to open input file \'%s\': File not found\n\n", options->input_file );
+		break;
+
 	default:
 		break;
 	}
@@ -337,10 +378,26 @@ void help( int error_code, ProgramOptions *options )
 	}
 	else
 	{
-		printf( "Try \'-h\' or \'--help\' options for more details" );
+		printf( "Try \'-h\' or \'--help\' options for more details\n" );
 	}
 }
 
+/* generate_output
+ *
+ * Purpose: this function handles output generation for each of the routines
+ *   to avoid code duplication
+ *
+ * Parameters:
+ *   ProgramOptions *options - pointer to program runtime options struct
+ *   FILE *output - output file if any
+ *   char **token - array of tokens to be passed when using batch or interactive mode
+ *                  tokens must appear in this order:
+ *                    0 - number in valid double format
+ *                    1 - original unit
+ *                    2 - converted unit
+ *
+ * Returns: nothing
+ */
 void generate_output( ProgramOptions *options, FILE *output, char **token )
 {
 	int argc = options->argc;
@@ -406,7 +463,6 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 		{
 			if ( options->input_mode != BATCH_MODE )
 			{
-				free( output_str );
 				help( OUTPUT_FILE_ERR, options );
 			}
 		}
@@ -443,6 +499,12 @@ void batch_convert( ProgramOptions *options )
 	if ( options->input_file != NULL )
 	{
 		input = fopen( options->input_file, "r" );
+
+		if ( input == NULL )
+		{
+			help( INPUT_FILE_ERR, options );
+			return;
+		}
 	}
 	else
 	{
@@ -452,6 +514,13 @@ void batch_convert( ProgramOptions *options )
 	if ( options->output_mode > 0 )
 	{
 		output = fopen( options->output_file, "w" );
+
+		if ( output == NULL )
+		{
+			help( OUTPUT_FILE_ERR, options );
+			fclose( input );
+			return;
+		}
 	}
 
 	while ( feof( input ) == 0 )
