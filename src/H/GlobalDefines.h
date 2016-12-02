@@ -79,6 +79,7 @@ Yucon - General purpose unit converter
 #define OUTPUT_FILE_ERR    5
 #define UNITS_FILE_MISSING 6
 #define INPUT_FILE_ERR     7
+#define FILE_OUTPUT_NOT_ALLOWED 8
 
 //STRING CONSTANTS FOR STANDARD UNIT TYPE NAMES
 //GCC will issue warnings for these definitions although they are valid

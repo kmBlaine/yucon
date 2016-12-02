@@ -342,6 +342,10 @@ void help( int error_code, ProgramOptions *options )
 		printf( "unable to open input file \'%s\': File not found\n\n", options->input_file );
 		break;
 
+	case FILE_OUTPUT_NOT_ALLOWED:
+		printf( "file output not allowed in interactive mode\n\n");
+		break;
+
 	default:
 		break;
 	}
@@ -598,8 +602,59 @@ void args_convert( ProgramOptions *options )
  *
  * Returns: Int - 0 to stop. Nonzero to continue
  */
-int interactive_mode()
+void interactive_mode( ProgramOptions *options )
 {
+	if (options->output_mode > STDOUT_MODE )
+	{
+		//help function distinguishes between input modes
+		//set to non-interactive mode to print command line help messages instead of interactive messages
+		options->input_mode = ONE_TIME_MODE;
+		help( FILE_OUTPUT_NOT_ALLOWED, options );
+		return;
+	}
+
+	int exit = 0;
+
+	//user may have accidentally piped input in which case reading from stdin will cause errors
+	while ( !exit && (feof(stdin) == 0) )
+	{
+		char line_buffer[MAX_BUFFER_SIZE];
+
+		fgets( line_buffer, MAX_BUFFER_SIZE, stdin );
+
+		//replace newline character before proceeding
+		for ( int pos = 0; line_buffer[pos] != NULL_CHAR; pos++ )
+		{
+			if ( line_buffer[pos] == '\n' )
+			{
+				line_buffer[pos] = NULL_CHAR;
+				break;
+			}
+		}
+
+		if ( strcmp( line_buffer, "exit" ) == 0 )
+		{
+			exit = 1;
+		}
+
+		char *token[3];
+		token[0] = NULL;
+		token[1] = NULL;
+		token[2] = NULL;
+
+		token[0] = strtok( line_buffer, " " );
+		token[1] = strtok( NULL, " " );
+		token[2] = strtok( NULL, " " );
+
+		if ( (token[0] == NULL) || (token[1] == NULL) || (token[2] == NULL) )
+		{
+			help( NOT_ENOUGH_ARGS, options );
+			continue;
+		}
+
+		generate_output( options, NULL, token );
+	}
+
 	FUNCTION_NOT_IMPLEMENTED("interactive_mode");
-	return 0;
+	return;
 }
