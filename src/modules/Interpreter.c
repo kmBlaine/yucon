@@ -44,10 +44,9 @@ Yucon - General purpose unit converter
 #define SIMPLE_FORMAT      0
 #define DESCRIPTIVE_FORMAT 1
 #define VERBOSE_FORMAT     2
-#define TRY_ARGS_CONVERT   0xD9 //this value was chosen because it is unlikely error codes will ever reach this high
-                                //...and because District 9 is one of my favorite movies :)
 
 #define MAX_BUFFER_SIZE 128
+#define MAX_TOKENS      4
 
 /* get_type_str
  *
@@ -101,7 +100,38 @@ const char *get_type_str( int unit_type )
 	}
 }
 
-/* check_nondas_arg
+/* print_version
+ *
+ * Purpose: prints the program version and license info from the console
+ *   implmented to prevent needless text duplication between the help
+ *   methods
+ *
+ * Parameters: none
+ *
+ * Returns: nothing
+ */
+void print_version()
+{
+	printf( PROGRAM_TITLE
+			COPYRIGHT_NOTICE
+			"    Released: "RELEASE_DATE"\n"
+			"    Source code available at <https://github.com/kmBlaine/yucon>\n"
+			"    See changelog in the \'README\' for version-specific details\n\n"
+			"LICENSE NOTICE:\n"
+			"This program is free software: you can redistribute it and/or modify\n"
+			"it under the terms of the GNU General Public License as published by\n"
+			"the Free Software Foundation, either version 3 of the License, or\n"
+			"(at your option) any later version.\n\n"
+			"This program is distributed in the hope that it will be useful,\n"
+			"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+			"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
+			"GNU General Public License for more details.\n\n"
+			"You should have received a copy of the GNU General Public License\n"
+			"along with this program.  If not, see <http://www.gnu.org/licenses/>.\n"
+	);
+}
+
+/* check_nondash_arg
  *
  * Purpose: checks if nonspecial arguments appear in an expected way and
  *   returns an appropriate action code. this avoids duplicated code for properly
@@ -175,7 +205,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 	//assume default options
 	options->argc = argc;
 	options->argv = argv;
-	options->input_mode = ONE_TIME_MODE;
+	options->input_mode = INTERACTIVE_MODE;
 	options->input_file = NULL;
 	options->output_mode = STDOUT_MODE;
 	options->output_file = NULL;
@@ -187,6 +217,10 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 		if ( (strcmp( argv[arg], "-h" ) == 0) || (strcmp( argv[arg], "--help") == 0) )
 		{
 			return HELP_REQUESTED;
+		}
+		if ( strcmp( argv[arg], "--version" ) == 0 )
+		{
+			return VERSION_REQUESTED;
 		}
 	}
 
@@ -236,6 +270,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 
 				if ( error_code == TRY_ARGS_CONVERT )
 				{
+					options->input_mode = ONE_TIME_MODE;
 					break;
 				}
 				else if ( error_code )
@@ -254,6 +289,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 
 			if ( error_code == TRY_ARGS_CONVERT )
 			{
+				options->input_mode = ONE_TIME_MODE;
 				break;
 			}
 			else if ( error_code )
@@ -275,12 +311,17 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
  * Parameters:
  *   int error_code - internal code for the runtime error. see GlobalDefines.h
  *   ProgramOptions *options - options that the program was run with
- *   UnitNode *units_list - head of the list of units
  *
  * Returns: nothing
  */
 void help( int error_code, ProgramOptions *options )
 {
+	if ( error_code == VERSION_REQUESTED )
+	{
+		print_version();
+		return;
+	}
+
 	if ( error_code != HELP_REQUESTED )
 	{
 		printf( "Error: ");
@@ -350,18 +391,18 @@ void help( int error_code, ProgramOptions *options )
 		break;
 	}
 
-	printf( "YUCON - General Purpose Unit Converter - ALPHA\n"
+	printf( PROGRAM_TITLE
 			"Usage:\n"
-			"\tyucon\n"
-			"\tyucon [options] #### original_unit converted_unit\n"
+			"\tyucon [options]\n"
+			"\tyucon [options] #### <input_unit> <output_unit>\n"
 			"\tyucon -b [options] [input file]\n\n"
 	);
 
 	if ( error_code == HELP_REQUESTED )
 	{
-		printf( "MODES:\n"
-				"\tNormal Mode      - converts from command line args or input file\n"
-				"\tInteractive Mode - interactive conversion console. launched when ucon is given no arguments\n\n"
+		printf( "\tIn first form, run an interactive session for converting units\n"
+				"\tIn second form, perform the conversion specified on the command line\n"
+				"\tIn third form, perform a batch conversion from file or from pipe if no file is specified\n"
 				"OPTIONS:\n"
 				"\t-b          - batch conversion. convert units from input file.\n"
 				"\t              last argument is expected to be input file. if no\n"
@@ -370,19 +411,108 @@ void help( int error_code, ProgramOptions *options )
 				"\t              console output\n\n"
 				"\t-d          - descriptive. includes unit\n\n"
 				"\t-v          - verbose. prints input+output values and units together\n\n"
-				"\t-h, --help  - prints this help message\n\n"
+				"\t-h, --help  - prints this help message\n"
+				"\t--version   - print version and license info\n\n"
 				"Examples:\n"
 				"\tyucon -v 1 in mm\n"
 				"\tConverts 1 in to mm. Output: 1 in = 25.4 mm\n\n"
 				"\tyucon -b -oq output.txt input.txt\n"
 				"\tPerforms conversions in input.txt and writes results to output.txt. No console output\n\n"
-				"THIS IS FREE SOFTWARE LICENSED UNDER GPLv3\n"
-				"Copyright (C) 2016 - Blaine Murphy\n"
+				"This is free software licensed under the GNU Public License v3.\n"
+				"Use \'--version\' option for more details.\n"
+				COPYRIGHT_NOTICE
 		);
 	}
 	else
 	{
 		printf( "Try \'-h\' or \'--help\' options for more details\n" );
+	}
+}
+
+/* help_interactive
+ *
+ * Purpose: prints help messages specific to the interactive mode
+ *   implemented to avoid numerous checks within the previous help
+ *   method and because the parameters are not the same
+ *
+ * Parameters:
+ *   int error_code - internal error code to retrieve help on
+ *   ProgramOptions *options - pointer to program runtime options struct
+ *   char **token - array of user input tokens
+ *
+ * Returns: nothing
+ */
+void help_interactive( int error_code, ProgramOptions *options, char **token )
+{
+	if ( error_code == VERSION_REQUESTED )
+	{
+		print_version();
+		return;
+	}
+
+	if ( error_code != HELP_REQUESTED )
+	{
+		printf( "Error: ");
+	}
+
+	switch ( error_code )
+	{
+	case NOT_ENOUGH_ARGS:
+		printf( "Not enough arguments\n\n" );
+		break;
+
+	case UNRECOGNIZED_ARG:
+		printf( "unrecognized argument\n\n" );
+		break;
+
+	case TOO_MANY_ARGS:
+		printf( "too many arguments\n\n" );
+		break;
+
+	case NONNUMERIC_INPUT:
+		printf( "unrecognized command\n\n" );
+		break;
+
+	case INVALID_INPUT:
+		printf( "value out of range\n\n" );
+		break;
+
+	case UNIT_FROM_NF:
+		printf( "converting from unknown unit: %s\n\n", token[1] );
+		break;
+
+	case UNIT_TO_NF:
+		printf( "converting to unknown unit: %s\n\n", token[2] );
+		break;
+
+	case INCOMPATIBLE_UNITS:
+		printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
+				get_type_str( get_unit_by_name( token[1] )->unit_type ),
+				get_type_str( get_unit_by_name( token[2] )->unit_type )
+		);
+		break;
+
+	default:
+		if ( error_code != HELP_REQUESTED ){ printf( "unknown error.\n\n" ); }
+		break;
+	}
+
+	if ( error_code == HELP_REQUESTED )
+	{
+		printf( "Enter a conversion or command. Conversions expected in format:\n"
+				"\t#### <input_unit> <output_unit>\n\n"
+				"COMMANDS:\n"
+				"\thelp    - print this help message\n"
+				"\texit    - exit the program\n\n"
+				"\tversion - print version and license info\n"
+				"This is free software licensed under the GNU Public License v3.\n"
+				"Type \'version\' for more details.\n"
+				COPYRIGHT_NOTICE
+		);
+	}
+	else
+	{
+		printf( "Type \'help' for assistance.\n" );
 	}
 }
 
@@ -411,7 +541,7 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 	char *token1;
 	char *token2;
 
-	if ( options->input_mode == BATCH_MODE )
+	if ( options->input_mode != ONE_TIME_MODE )
 	{
 		token0 = token[0];
 		token1 = token[1];
@@ -429,9 +559,13 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 
 	if ( error_code )
 	{
-		if ( options->input_mode != BATCH_MODE )
+		if ( options->input_mode == ONE_TIME_MODE )
 		{
 			help( error_code, options );
+		}
+		else if ( options->input_mode == INTERACTIVE_MODE )
+		{
+			help_interactive( error_code, options, token );
 		}
 		return;
 	}
@@ -574,7 +708,7 @@ void args_convert( ProgramOptions *options )
 {
 	FILE *output;
 
-	if ( options->output_mode > STDOUT_MODE )
+	if ( options->output_mode != STDOUT_MODE )
 	{
 		output = fopen( options->input_file, "w" );
 
@@ -587,10 +721,84 @@ void args_convert( ProgramOptions *options )
 
 	generate_output( options, output, NULL );
 
-	if ( options->output_mode > STDOUT_MODE )
+	if ( options->output_mode != STDOUT_MODE )
 	{
 		fclose( output );
 	}
+}
+
+/* run_command
+ *
+ * Purpose: given a string representing some command for interactive mode
+ *   decompose the command and execute accordingly. return error code if
+ *   command cannot be executed or to signal the program in some way
+ *
+ * Parameters:
+ *   char *str - line of user input
+ *   ProgramOptions *options - pointer to program runtime options struct
+ *
+ * Returns: 0 - success. Nonzero - failure or signal
+ */
+int run_command( char *str, ProgramOptions *options )
+{
+	//if empty line, do nothing
+	if ( str[0] == '\n' )
+	{
+		return EXIT_SUCCESS;
+	}
+
+	//replace newline character before proceeding
+	for ( int pos = 0; str[pos] != NULL_CHAR; pos++ )
+	{
+		if ( str[pos] == '\n' )
+		{
+			str[pos] = NULL_CHAR;
+			break;
+		}
+	}
+
+	//tokenize the input line. first initialize the pointer array
+	char *token[MAX_TOKENS];
+	for ( int pos = 0; pos < MAX_TOKENS; pos++ )
+	{
+		token[pos] = NULL;
+	}
+
+	//get initial token
+	token[0] = strtok( str, " " );
+
+	//get remaining tokens if any. exit loop if more tokens appeared
+	for ( int pos = 1; token[pos-1]; pos++ )
+	{
+		//CHANGE THIS TO ERROR RETURN?? Blaine M. - 3 DEC 2016
+		if ( pos >= MAX_TOKENS )
+		{
+			break;
+		}
+
+		token[pos] = strtok( NULL, " " );
+	}
+
+	if ( strcmp( token[0], "exit" ) == 0 )
+	{
+		return EXIT_PROGRAM;
+	}
+	else if ( strcmp( token[0], "help" ) == 0 )
+	{
+		return HELP_REQUESTED;
+	}
+	else if ( strcmp( token[0], "version" ) == 0 )
+	{
+		return VERSION_REQUESTED;
+	}
+	else if ( (token[0] == NULL) || (token[1] == NULL) || (token[2] == NULL) )
+	{
+		return NOT_ENOUGH_ARGS;
+	}
+
+	generate_output( options, NULL, token );
+
+	return 0;
 }
 
 /* interactive_mode
@@ -598,63 +806,43 @@ void args_convert( ProgramOptions *options )
  * Purpose: runs an interactive terminal session for unit conversion
  *
  * Parameters:
- *   none at this time
+ *   ProgramOptions *options - pointer to program runtime options struct
  *
- * Returns: Int - 0 to stop. Nonzero to continue
+ * Returns: nothing
  */
 void interactive_mode( ProgramOptions *options )
 {
-	if (options->output_mode > STDOUT_MODE )
+	if (options->output_mode != STDOUT_MODE )
 	{
 		//help function distinguishes between input modes
 		//set to non-interactive mode to print command line help messages instead of interactive messages
-		options->input_mode = ONE_TIME_MODE;
+		//options->input_mode = ONE_TIME_MODE;
 		help( FILE_OUTPUT_NOT_ALLOWED, options );
 		return;
 	}
 
-	int exit = 0;
+	printf( PROGRAM_TITLE
+			"Type \'help\' for assistance.\n"
+	);
 
 	//user may have accidentally piped input in which case reading from stdin will cause errors
-	while ( !exit && (feof(stdin) == 0) )
+	while ( feof(stdin) == 0 )
 	{
+		printf( "> " );
+
 		char line_buffer[MAX_BUFFER_SIZE];
 
 		fgets( line_buffer, MAX_BUFFER_SIZE, stdin );
 
-		//replace newline character before proceeding
-		for ( int pos = 0; line_buffer[pos] != NULL_CHAR; pos++ )
+		int error_code = run_command( line_buffer, options );
+
+		if ( error_code == EXIT_PROGRAM )
 		{
-			if ( line_buffer[pos] == '\n' )
-			{
-				line_buffer[pos] = NULL_CHAR;
-				break;
-			}
+			break;
 		}
-
-		if ( strcmp( line_buffer, "exit" ) == 0 )
+		else if ( error_code )
 		{
-			exit = 1;
+			help_interactive( error_code, options, NULL );
 		}
-
-		char *token[3];
-		token[0] = NULL;
-		token[1] = NULL;
-		token[2] = NULL;
-
-		token[0] = strtok( line_buffer, " " );
-		token[1] = strtok( NULL, " " );
-		token[2] = strtok( NULL, " " );
-
-		if ( (token[0] == NULL) || (token[1] == NULL) || (token[2] == NULL) )
-		{
-			help( NOT_ENOUGH_ARGS, options );
-			continue;
-		}
-
-		generate_output( options, NULL, token );
 	}
-
-	FUNCTION_NOT_IMPLEMENTED("interactive_mode");
-	return;
 }

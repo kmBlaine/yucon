@@ -38,7 +38,11 @@ Yucon - General purpose unit converter
 #define BATCH_MODE         1
 #define INTERACTIVE_MODE   2
 
-#define NULL_CHAR '\0'
+#define NULL_CHAR         '\0'
+#define VERSION           "ALPHA"
+#define PROGRAM_TITLE     "YUCON - General Purpose Unit Converter - "VERSION"\n"
+#define RELEASE_DATE      "3 Dec 2016"
+#define COPYRIGHT_NOTICE  "Copyright (C) 2016 - Blaine Murphy\n"
 
 //NUMERIC CONSTANTS FOR STANDARD UNIT TYPES
 #define LENGTH   0
@@ -66,20 +70,34 @@ Yucon - General purpose unit converter
  * INCOMPATIBLE_UNITS - unit types are mismatched ie attempting to convert volume to length
  * OUTPUT_FILE_ERR    - output file specified could not be opened
  * UNITS_FILE_MISSING - units.dat file not found in /etc/yucon/ or is corrupt
+ * INPUT_FILE_ERR     - input file not found or unreadable
+ * FILE_OUTPUT_NOT_ALLOWED - user attempted to enable file output in interactive mode
  */
 #define NOT_ENOUGH_ARGS    1
 #define UNRECOGNIZED_ARG   2
 #define TOO_MANY_ARGS      3
-#define HELP_REQUESTED     4
-#define NONNUMERIC_INPUT   -1
-#define INVALID_INPUT      -2
-#define UNIT_FROM_NF       -3
-#define UNIT_TO_NF         -4
-#define INCOMPATIBLE_UNITS -5
-#define OUTPUT_FILE_ERR    5
-#define UNITS_FILE_MISSING 6
-#define INPUT_FILE_ERR     7
-#define FILE_OUTPUT_NOT_ALLOWED 8
+#define NONNUMERIC_INPUT   4
+#define INVALID_INPUT      5
+#define UNIT_FROM_NF       6
+#define UNIT_TO_NF         7
+#define INCOMPATIBLE_UNITS 8
+#define OUTPUT_FILE_ERR    9
+#define UNITS_FILE_MISSING 10
+#define INPUT_FILE_ERR     11
+#define FILE_OUTPUT_NOT_ALLOWED 12
+
+/* INTERNAL COMMAND DEFINES
+ *
+ * THe program uses a set of internal commands at various points
+ * particularly for the interactive mode. These will be negative
+ * by convention to distinguish them from error codes which are
+ * positive.
+ */
+#define HELP_REQUESTED    -1
+#define EXIT_PROGRAM      -2
+#define TRY_ARGS_CONVERT  -3
+#define VERSION_REQUESTED -4
+
 
 //STRING CONSTANTS FOR STANDARD UNIT TYPE NAMES
 //GCC will issue warnings for these definitions although they are valid

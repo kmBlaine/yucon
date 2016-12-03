@@ -63,7 +63,7 @@ int main( int argc, char *argv[] )
 		break;
 
 	case INTERACTIVE_MODE:
-		interactive_mode();
+		interactive_mode( &options );
 		break;
 
 	default:
