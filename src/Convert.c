@@ -28,7 +28,7 @@ Yucon - General purpose unit converter
  * reimplement the conversions or formatting.
  */
 
-#include "../H/Convert.h"
+#include "Convert.h"
 
 #include <stdlib.h>
 #include <stdio.h>

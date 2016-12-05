@@ -30,9 +30,9 @@ Yucon - General purpose unit converter
  * as possible and make the program easily extensible.
  */
 
-#include "../H/Interpreter.h"
-#include "../H/UnitList.h"
-#include "../H/Convert.h"
+#include "Interpreter.h"
+#include "UnitList.h"
+#include "Convert.h"
 
 #include <stdlib.h>
 #include <stdio.h>

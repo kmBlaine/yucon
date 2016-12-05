@@ -25,9 +25,9 @@ Yucon - General purpose unit converter
 #ifndef H_INTERPRETER_H_
 #define H_INTERPRETER_H_
 
-#include "../H/GlobalDefines.h"
-#include "../H/Convert.h"
-#include "../H/UnitList.h"
+#include "GlobalDefines.h"
+#include "Convert.h"
+#include "UnitList.h"
 
 /* struct ProgramOptions
  *

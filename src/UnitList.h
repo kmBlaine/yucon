@@ -31,7 +31,7 @@ Yucon - General purpose unit converter
 #ifndef H_UNITLIST_H_
 #define H_UNITLIST_H_
 
-#include "../H/GlobalDefines.h"
+#include "GlobalDefines.h"
 
 typedef struct Unit Unit;
 struct Unit

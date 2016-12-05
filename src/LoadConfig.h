@@ -31,7 +31,7 @@ Yucon - General purpose unit converter
 #ifndef H_LOADCONFIG_H_
 #define H_LOADCONFIG_H_
 
-#include "../H/UnitList.h"
+#include "UnitList.h"
 #define MAX_LINE_LENGTH 512
 
 int load_units_list();

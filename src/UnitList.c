@@ -28,7 +28,7 @@ Yucon - General purpose unit converter
  * of units to change while leaving the lest of the program unchanged
  */
 
-#include "../H/UnitList.h"
+#include "UnitList.h"
 #include <stdlib.h>
 #include <stdio.h>
 

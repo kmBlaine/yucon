@@ -27,8 +27,8 @@ Yucon - General purpose unit converter
  * from the data files.
  */
 
-#include "../H/LoadConfig.h"
-#include "../H/UnitList.h"
+#include "LoadConfig.h"
+#include "UnitList.h"
 
 #include <stdlib.h>
 #include <string.h>

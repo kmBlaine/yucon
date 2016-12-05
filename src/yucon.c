@@ -29,8 +29,8 @@ Yucon - General purpose unit converter
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "H/Interpreter.h"
-#include "H/LoadConfig.h"
+#include "Interpreter.h"
+#include "LoadConfig.h"
 
 
 int main( int argc, char *argv[] )
