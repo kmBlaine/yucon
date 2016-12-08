@@ -30,6 +30,7 @@ Yucon - General purpose unit converter
  * as possible and make the program easily extensible.
  */
 
+#include "GlobalDefines.h"
 #include "Interpreter.h"
 #include "UnitList.h"
 #include "Convert.h"
@@ -402,8 +403,8 @@ void help( int error_code, ProgramOptions *options )
 	{
 		printf( "\tIn first form, run an interactive session for converting units\n"
 				"\tIn second form, perform the conversion specified on the command line\n"
-				"\tIn third form, perform a batch conversion from file or from pipe if no file is specified\n"
-				"OPTIONS:\n"
+				"\tIn third form, perform a batch conversion from file or from pipe if no file is specified\n\n"
+				"Options:\n"
 				"\t-b          - batch conversion. convert units from input file.\n"
 				"\t              last argument is expected to be input file. if no\n"
 				"\t              file is specified, standard input is used\n\n"
@@ -411,7 +412,7 @@ void help( int error_code, ProgramOptions *options )
 				"\t              console output\n\n"
 				"\t-d          - descriptive. includes unit\n\n"
 				"\t-v          - verbose. prints input+output values and units together\n\n"
-				"\t-h, --help  - prints this help message\n"
+				"\t-h, --help  - prints this help message\n\n"
 				"\t--version   - print version and license info\n\n"
 				"Examples:\n"
 				"\tyucon -v 1 in mm\n"
@@ -503,7 +504,7 @@ void help_interactive( int error_code, ProgramOptions *options, char **token )
 				"\t#### <input_unit> <output_unit>\n\n"
 				"COMMANDS:\n"
 				"\thelp    - print this help message\n"
-				"\texit    - exit the program\n\n"
+				"\texit    - exit the program\n"
 				"\tversion - print version and license info\n"
 				"This is free software licensed under the GNU Public License v3.\n"
 				"Type \'version\' for more details.\n"

@@ -15,19 +15,17 @@ Yucon - General purpose unit converter
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
- * Interpreter.h
+/* File: Interpreter.h
+ *   Author: Blaine Murphy
+ *   Created: 2016-11-22
  *
- *  Created on: Nov 19, 2016
- *      Author: kbm1271
+ * DESCRIPTION:
+ *
+ * Public declarations for the Interpreter.c module.
  */
 
 #ifndef H_INTERPRETER_H_
 #define H_INTERPRETER_H_
-
-#include "GlobalDefines.h"
-#include "Convert.h"
-#include "UnitList.h"
 
 /* struct ProgramOptions
  *
@@ -76,7 +74,7 @@ struct ProgramOptions
 	char **argv;
 };
 
-int set_program_options( ProgramOptions*, int, char** );
+int  set_program_options( ProgramOptions*, int, char** );
 void interactive_mode( ProgramOptions* );
 void batch_convert( ProgramOptions* );
 void args_convert( ProgramOptions* );

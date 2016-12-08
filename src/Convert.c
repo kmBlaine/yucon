@@ -28,7 +28,9 @@ Yucon - General purpose unit converter
  * reimplement the conversions or formatting.
  */
 
+#include "GlobalDefines.h"
 #include "Convert.h"
+#include "UnitList.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,8 +47,9 @@ Yucon - General purpose unit converter
  *                  Ex. "65536", "3.141592654", "6.022E+23"
  *   char *unit_from_name - name of the unit to convert from
  *   char *unit_to_name - name of the unit to convert to
+ *   double *conversion - pointer to double to write value into
  *
- * Returns: Double - positive on conversion success. negative if error
+ * Returns: Int - 0 on success. Nonzero on error.
  */
 int get_conversion( char *number, char *unit_from_name, char *unit_to_name, double *conversion )
 {

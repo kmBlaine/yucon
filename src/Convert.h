@@ -30,9 +30,6 @@ Yucon - General purpose unit converter
 #ifndef H_CONVERT_H_
 #define H_CONVERT_H_
 
-#include "GlobalDefines.h"
-#include "UnitList.h"
-
 #define OUTPUT_STR_SIZE 128
 
 int get_conversion( char*, char*, char*, double* );

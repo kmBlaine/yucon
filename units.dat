@@ -410,6 +410,7 @@ ATMOSPHERE
 names=atmosphere,atm
 type=pressure
 factor=101325
+offset=0
 
 CELCIUS
 names=celcius,C

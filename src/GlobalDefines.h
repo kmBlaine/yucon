@@ -34,6 +34,7 @@ Yucon - General purpose unit converter
 #ifndef H_GLOBALDEFINES_H_
 #define H_GLOBALDEFINES_H_
 
+//main program operating modes
 #define ONE_TIME_MODE      0
 #define BATCH_MODE         1
 #define INTERACTIVE_MODE   2
@@ -42,20 +43,7 @@ Yucon - General purpose unit converter
 #define VERSION           "ALPHA"
 #define PROGRAM_TITLE     "YUCON - General Purpose Unit Converter - "VERSION"\n"
 #define RELEASE_DATE      "3 Dec 2016"
-#define COPYRIGHT_NOTICE  "Copyright (C) 2016 - Blaine Murphy\n"
-
-//NUMERIC CONSTANTS FOR STANDARD UNIT TYPES
-#define LENGTH   0
-#define VOLUME   1
-#define AREA     3
-#define ENERGY   4
-#define POWER    5
-#define MASS     6
-#define FORCE    7
-#define TORQUE   8
-#define SPEED    9
-#define PRESSURE 10
-#define TEMP     11
+#define COPYRIGHT_NOTICE  "Copyright (C) 2016 Blaine Murphy\n"
 
 /* Error Code defines
  *
@@ -98,6 +86,18 @@ Yucon - General purpose unit converter
 #define TRY_ARGS_CONVERT  -3
 #define VERSION_REQUESTED -4
 
+//NUMERIC CONSTANTS FOR STANDARD UNIT TYPES
+#define LENGTH   0
+#define VOLUME   1
+#define AREA     3
+#define ENERGY   4
+#define POWER    5
+#define MASS     6
+#define FORCE    7
+#define TORQUE   8
+#define SPEED    9
+#define PRESSURE 10
+#define TEMP     11
 
 //STRING CONSTANTS FOR STANDARD UNIT TYPE NAMES
 //GCC will issue warnings for these definitions although they are valid
@@ -115,7 +115,7 @@ static const char *torque = "torque";
 static const char *speed = "speed";
 static const char *pressure = "pressure";
 static const char *temp = "temperature";
-//renenable unused variable warnings
+//enable unused variable warnings
 #pragma GCC diagnostic pop
 
 //GENERIC NOT IMPLEMENTED WARNING

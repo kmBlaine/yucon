@@ -42,22 +42,13 @@ struct Unit
 	double offset;
 };
 
-typedef struct UnitNode UnitNode;
-struct UnitNode
-{
-	Unit *unit;
-	UnitNode *next_unit;
-};
-
-#define __NEW_UNIT        calloc(1,sizeof(Unit))
-#define __NEW_UNIT_NODE   calloc(1,sizeof(UnitNode))
+#define __NEW_UNIT  calloc(1,sizeof(Unit))
 
 void delete_names_list( char** );
 void delete_unit( Unit* );
-Unit *delete_unit_node( UnitNode* );
 void delete_units_list();
 
-int add_unit( Unit*, int );
+int  add_unit( Unit*, int );
 Unit *remove_unit( int );
 void print_units_list();
 

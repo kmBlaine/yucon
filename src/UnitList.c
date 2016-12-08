@@ -29,8 +29,19 @@ Yucon - General purpose unit converter
  */
 
 #include "UnitList.h"
+
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#define __NEW_UNIT_NODE   calloc(1,sizeof(UnitNode))
+
+typedef struct UnitNode UnitNode;
+struct UnitNode
+{
+	Unit *unit;
+	UnitNode *next_unit;
+};
 
 UnitNode list_handle;
 
@@ -136,41 +147,6 @@ int add_unit( Unit* unit, int index )
 	return 1;
 }
 
-/* remove_unit
- *
- * Purpose: removes the unit at index from the given list. returns pointer
- *   to unit removed or null pointer if unsuccessful
- *
- * Parameters:
- *   int index - index to remove unit from
- *
- * Returns: Unit* - pointer to Unit removed. NULL if unsuccessful
- */
-Unit *remove_unit( int index )
-{
-	//list is dummy head node variant, pump loop to account for this
-	UnitNode *prev = &list_handle;
-	UnitNode *head = list_handle.next_unit;
-
-	//while not at correct position, find correct position to remove from
-	while ( (index != 0) && head )
-	{
-		prev = head;
-		head = head->next_unit;
-		index--;
-	}
-
-	//if attempting to remove out of bounds unit
-	if ( (index != 0) || (head == NULL) )
-	{
-		return NULL;
-	}
-
-	//drop unit from list
-	prev->next_unit = head->next_unit;
-	return delete_unit_node( head );
-}
-
 /* str_match
  *
  * Purpose: indicates if two strings match each other
@@ -231,7 +207,10 @@ Unit *get_unit_by_name( char *name )
 
 		for ( int pos = 0; (found == 0) && (unit->unit_name[pos] != NULL); pos++ )
 		{
-			found = str_match( name, unit->unit_name[pos] );
+			if ( strcmp( name, unit->unit_name[pos] ) == 0 )
+			{
+				found = 1;
+			}
 		}
 
 		head = head->next_unit;
