@@ -154,13 +154,41 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 			options->input_file = options->argv[arg];
 			return EXIT_SUCCESS;
 		}
-		//loop will not reach this point if args left = 0
+		//loop will not reach this point. args must be > 1
 		//if we reached this point, too many args
 		else
 		{
+			options->last_arg = options->argv[arg + 1];
 			return TOO_MANY_ARGS;
 		}
 	}
+	else
+	{
+		//check if the argument is a number
+		char *input_end = NULL;
+		strtod( options->argv[arg], &input_end );
+
+		//if the conversion was unsuccessful, input_end will be not be '\0'
+		if ( input_end && (input_end[0] != NULL_CHAR) )
+		{
+			return NONNUMERIC_INPUT;
+		}
+
+		if ( (options->argc - arg) == 3 )
+		{
+			return TRY_ARGS_CONVERT;
+		}
+		else if ( (options->argc - arg) < 3 )
+		{
+			return NOT_ENOUGH_ARGS;
+		}
+		else
+		{
+			options->last_arg = options->argv[arg + 3]; //set last_arg to the unexpected trailing argument
+			return TOO_MANY_ARGS; //there is a trailing argument or arguments
+		}
+	}
+	/*
 	//if in one time mode, and three args left, try to convert
 	else if ( (options->argc - arg) == 3 )
 	{
@@ -175,6 +203,7 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 	{
 		return NOT_ENOUGH_ARGS;
 	}
+	*/
 }
 
 /* set_program_options
@@ -331,13 +360,13 @@ void help( int error_code, ProgramOptions *options )
 	switch ( error_code )
 	{
 	case NOT_ENOUGH_ARGS:
-		if ( options->output_mode )
+		if ( options->output_mode != STDOUT_MODE )
 		{
 			printf( "%s: expected output file name\n\n", options->last_arg );
 		}
 		else
 		{
-			printf( "expected a unit conversion. Not enough arguments\n\n" );
+			printf( "incomplete conversion. Expected an input and output unit\n\n" );
 		}
 		break;
 
@@ -346,15 +375,20 @@ void help( int error_code, ProgramOptions *options )
 		break;
 
 	case TOO_MANY_ARGS:
-		printf( "-b: input file name expected as last argument\n\n" );
+		if ( options->input_mode == BATCH_MODE )
+		{
+			printf( "-b: expects input file as last argument: " );
+		}
+		printf( "found unexpected trailing argument: %s\n\n", options->last_arg );
+
 		break;
 
 	case NONNUMERIC_INPUT:
-		printf( "unrecognized value: %s\n\n", options->argv[options->argc-3] );
+		printf( "expected number. Found: %s\n\n", options->last_arg );
 		break;
 
 	case INVALID_INPUT:
-		printf( "out of range or unrecognized value: %s\n\n", options->argv[options->argc-3] );
+		printf( "out of range value: %s\n\n", options->argv[options->argc-3] );
 		break;
 
 	case UNIT_FROM_NF:

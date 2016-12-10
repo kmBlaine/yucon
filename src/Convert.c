@@ -53,14 +53,17 @@ Yucon - General purpose unit converter
  */
 int get_conversion( char *number, char *unit_from_name, char *unit_to_name, double *conversion )
 {
-	char *input_end = NULL;
-	double input = strtod( number, &input_end );
+	//char *input_end = NULL;
+	double input = strtod( number, NULL );
 
+	//numeral checking code moved to the Interpreter module - Blaine Murphy - 10 Dec 2016
+	/*
 	//if trailing characters were found in the number
 	if ( input_end && (input_end[0] != NULL_CHAR) )
 	{
 		return NONNUMERIC_INPUT;
 	}
+	*/
 
 	//if negative, zero, out of range or unrecognized input
 	if ( (input == NAN) || (input == INFINITY) )
