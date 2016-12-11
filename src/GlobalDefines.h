@@ -60,6 +60,9 @@ Yucon - General purpose unit converter
  * UNITS_FILE_MISSING - units.dat file not found in /etc/yucon/ or is corrupt
  * INPUT_FILE_ERR     - input file not found or unreadable
  * FILE_OUTPUT_NOT_ALLOWED - user attempted to enable file output in interactive mode
+ * UNKNOWN_PREFIX     - user specified an unknown metric prefix for a unit
+ * NO_NAME_GIVEN      - no unit name was given after prefix
+ * NO_NAME_ALLOWED    - a unit name was specified after the 'recall last' character ':'
  */
 #define NOT_ENOUGH_ARGS    1
 #define UNRECOGNIZED_ARG   2
@@ -73,6 +76,11 @@ Yucon - General purpose unit converter
 #define UNITS_FILE_MISSING 10
 #define INPUT_FILE_ERR     11
 #define FILE_OUTPUT_NOT_ALLOWED 12
+#define UNKNOWN_PREFIX     13
+#define NO_NAME_GIVEN      14
+#define NO_NAME_ALLOWED    15
+#define INPUT_UNIT_UNSET   16
+#define OUTPUT_UNIT_UNSET  17
 
 /* INTERNAL COMMAND DEFINES
  *
@@ -85,6 +93,7 @@ Yucon - General purpose unit converter
 #define EXIT_PROGRAM      -2
 #define TRY_ARGS_CONVERT  -3
 #define VERSION_REQUESTED -4
+#define RECALL_LAST       -5
 
 //NUMERIC CONSTANTS FOR STANDARD UNIT TYPES
 #define LENGTH   0

@@ -132,6 +132,20 @@ void print_version()
 	);
 }
 
+int is_double( char *str )
+{
+	char *input_end = NULL;
+	strtod( str, &input_end );
+
+	//if the conversion was unsuccessful, input_end will be not be '\0'
+	if ( input_end && (input_end[0] != NULL_CHAR) )
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
 /* check_nondash_arg
  *
  * Purpose: checks if nonspecial arguments appear in an expected way and
@@ -164,12 +178,7 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 	}
 	else
 	{
-		//check if the argument is a number
-		char *input_end = NULL;
-		strtod( options->argv[arg], &input_end );
-
-		//if the conversion was unsuccessful, input_end will be not be '\0'
-		if ( input_end && (input_end[0] != NULL_CHAR) )
+		if ( !is_double( options->argv[arg] ) )
 		{
 			return NONNUMERIC_INPUT;
 		}
@@ -527,6 +536,26 @@ void help_interactive( int error_code, ProgramOptions *options, char **token )
 		);
 		break;
 
+	case UNKNOWN_PREFIX:
+		printf( "unknown prefix\n\n" );
+		break;
+
+	case NO_NAME_GIVEN:
+		printf( "no name given after prefix\n\n" );
+		break;
+
+	case NO_NAME_ALLOWED:
+		printf( "no name allowed after \':\' (recall last) function\n\n" );
+		break;
+
+	case INPUT_UNIT_UNSET:
+		printf( "unable to recall last input. Not set\n\n" );
+		break;
+
+	case OUTPUT_UNIT_UNSET:
+		printf( "unable to recall last output. Not set\n\n" );
+		break;
+
 	default:
 		if ( error_code != HELP_REQUESTED ){ printf( "unknown error.\n\n" ); }
 		break;
@@ -721,7 +750,7 @@ void batch_convert( ProgramOptions *options )
 		token[1] = strtok( NULL, " " );
 		token[2] = strtok( NULL, " " );
 
-		if ( (token[0] == NULL) || (token[1] == NULL) || (token[2] == NULL) )
+		if ( (token[0] != NULL && !is_double(token[0])) || (token[1] == NULL) || (token[2] == NULL) )
 		{
 			continue;
 		}
@@ -826,9 +855,17 @@ int run_command( char *str, ProgramOptions *options )
 	{
 		return VERSION_REQUESTED;
 	}
-	else if ( (token[0] == NULL) || (token[1] == NULL) || (token[2] == NULL) )
+	else
 	{
-		return NOT_ENOUGH_ARGS;
+		if ( !is_double( token[0] ) )
+		{
+			return NONNUMERIC_INPUT;
+		}
+
+		if ( (token[1] == NULL) || (token[2] == NULL) )
+		{
+			return NOT_ENOUGH_ARGS;
+		}
 	}
 
 	generate_output( options, NULL, token );
