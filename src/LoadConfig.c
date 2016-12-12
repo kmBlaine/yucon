@@ -204,8 +204,23 @@ int load_units_list()
 {
 	int end_of_list = 0;
 
-	//open config file, exit early if config file does not exist
-	FILE *units_cfg = fopen( "/etc/yucon/units.dat", "r" );
+	FILE *units_cfg = NULL;
+
+//change path based on the platform this will be built and run on
+//Linux will expect config file in /etc/yucon/
+#if defined(__linux__) || defined(__gnu_linux__)
+	units_cfg = fopen( "/etc/yucon/units.dat", "r" );
+
+//windows will expect it in Program Files
+#elif defined(_WIN32) || defined(__WIN32__) || (__WINDOWS__)
+	units_cfg = fopen( "C:\Program Files\yucon\units.dat", "r" );
+
+//if unable to determine system, default to loading from the current file path
+#else
+	units_cfg = fopen( "units.dat", "r" );
+#endif
+
+	//exit early if config file does not exist
 	if ( units_cfg == NULL )
 	{
 		return UNITS_FILE_MISSING;

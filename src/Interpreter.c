@@ -680,6 +680,10 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 		printf( "%s", output_str );
 	}
 
+//GCC throws a "Wmaybe-uninitialized" warning here
+//safe to ignore. due to the program's error checking, output_str will always be set
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 	if ( options->output_mode > 0 )
 	{
 		if ( fputs( output_str, output ) == EOF )
@@ -690,6 +694,7 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 			}
 		}
 	}
+#pragma GCC diagnostic pop
 
 	free( output_str );
 }
