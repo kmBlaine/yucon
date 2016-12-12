@@ -1,7 +1,11 @@
 Yucon - A general-purpose unit converter
 ================================================================================
+Copyright (C) 2016 Blaine Murphy
+This program is free software licensed under the GNU Public License Version 3.
+You should have recieved a copy of the license along with this program. If not,
+see <https://www.gnu.org/licenses/>
 
-INTRODUCTION:
+
 Yucon is a simple but feature-rich unit conversion utility built especially for
 use on the command line. It was designed with three things in mind:
   1. Empower the user. Make the program as intuitive as possible and provide a
@@ -9,7 +13,7 @@ use on the command line. It was designed with three things in mind:
   2. Modular design. Yucon is designed to be easily extensible. For instance,
      units are loaded procedurally from a file rather than being built into the
      program.
-  3. Freedom. Yucon is free and open source to make it as useful as possible
+  3. Freedom. Yucon is free and open source to make it as useful as possible.
 
 These are some of the features that Yucon supports:
   -  Direct conversion of units on the command line:
@@ -17,37 +21,47 @@ These are some of the features that Yucon supports:
   -  Interactive terminal mode
   -  Batch conversion from files
 
-DISCLAIMER: Yucon's use case is intended to be GENERAL PURPOSE. It should not be
-confused as a program designed for specialized and/or rigourous scientific or
-engineering applications. Per the terms of GPLv3 under which this program is
-licensed, this program is provided with the hope that it will be useful, BUT
-WITH ASOLUTELY NO WARRANTY! Use at your own risk and discretion.
+DISCLAIMER: Per the terms of the GNU General Public License Version 3, this
+program is provided with the hope that it will be useful, BUT WITHOUT ANY 
+WARRANTY; without even an implied warranty of FITNESS FOR A PARTICULAR PURPOSE.
+USER AT YOUR OWN RISK AND DISCRETION! However, PLEASE report any and all bugs to
+help make this disclaimer a moot point.
 
---------------------------------------------------------------------------------
+********************************************************************************
 1 - INSTALLATION
---------------------------------------------------------------------------------
+********************************************************************************
+Yucon has been compiled and run successfully in the following environments:
+    -Linux 4.8
+    -Windows 10
+
+    If you have the know-how, please try compiling Yucon from source and running
+    it on your environment to help verify its portability.
+
+For Linux users:
+    1. Download the program from the git repository:
+       https://github.com/kmBlaine/yucon
+
+    2. 
+
+********************************************************************************
+2 - BASIC USAGE
+********************************************************************************
 
 
---------------------------------------------------------------------------------
-2 - USAGE
---------------------------------------------------------------------------------
+********************************************************************************
+3 - CHANGELOG
+********************************************************************************
 
+v0.1 - Released 12 Dec 2016
+-------------------------------------------------
+  - Initial Beta release
+  - Base feature set implemented:
+    - Direct conversion of units on the command line
+    - Batch conversion of units from file or pipe
+    - Interactive mode for converting units
+    - Loads all units from units.dat file
+    - Support for following unit types: length, volume, area, energy, power,
+        mass, force, torque, speed, pressure, temperature
+    - Support for metric prefixing
+    - Support for recall when using batch and interactive mode
 
---------------------------------------------------------------------------------
-3 - BATCH INPUT FILES
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
-4 - OUTPUT FILES
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
-5 - YUCON'S CONFIGURATION FILES
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
-6 - OTHER FEATURES
---------------------------------------------------------------------------------
