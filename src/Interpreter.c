@@ -114,7 +114,7 @@ const char *get_type_str( int unit_type )
 void print_version()
 {
 	printf( PROGRAM_TITLE
-			COPYRIGHT_NOTICE
+			"    "COPYRIGHT_NOTICE
 			"    Released: "RELEASE_DATE"\n"
 			"    Source code available at <https://github.com/kmBlaine/yucon>\n"
 			"    See changelog in the \'README\' for version-specific details\n\n"
@@ -137,8 +137,8 @@ int is_double( char *str )
 	char *input_end = NULL;
 	strtod( str, &input_end );
 
-	//if the conversion was unsuccessful, input_end will be not be '\0'
-	if ( input_end && (input_end[0] != NULL_CHAR) )
+	//if the conversion was unsuccessful, input_end will be not be '\0' and 'recall last' will not be present
+	if ( (strcmp(str, ":") != 0) && input_end && (input_end[0] != NULL_CHAR) )
 	{
 		return 0;
 	}
@@ -410,8 +410,8 @@ void help( int error_code, ProgramOptions *options )
 
 	case INCOMPATIBLE_UNITS:
 		printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
-				get_type_str( get_unit_by_name( options->argv[options->argc-2] )->unit_type ),
-				get_type_str( get_unit_by_name( options->argv[options->argc-1] )->unit_type )
+				get_type_str( get_unit_by_name( options->argv[options->argc-2], INPUT_UNIT )->unit_type ),
+				get_type_str( get_unit_by_name( options->argv[options->argc-1], OUTPUT_UNIT )->unit_type )
 		);
 		break;
 
@@ -431,38 +431,59 @@ void help( int error_code, ProgramOptions *options )
 		printf( "file output not allowed in interactive mode\n\n");
 		break;
 
+	case UNKNOWN_PREFIX:
+		printf( "unknown metric prefix\n\n" );
+		break;
+
+	case NO_NAME_GIVEN:
+		printf( "no name given after metric prefix\n\n" );
+		break;
+
+	case NO_NAME_ALLOWED:
+		printf( "no name allowed after \':\' (recall last) function\n\n" );
+		break;
+
+	case INPUT_UNIT_UNSET:
+		printf( "unable to recall last input. Not set\n\n" );
+		break;
+
+	case OUTPUT_UNIT_UNSET:
+		printf( "unable to recall last output. Not set\n\n" );
+		break;
+
 	default:
 		break;
 	}
 
 	printf( PROGRAM_TITLE
 			"Usage:\n"
-			"\tyucon [options]\n"
-			"\tyucon [options] #### <input_unit> <output_unit>\n"
-			"\tyucon -b [options] [input file]\n\n"
+			"    yucon [options]\n"
+			"    yucon [options] #### <input_unit> <output_unit>\n"
+			"    yucon -b [options] [input file]\n\n"
 	);
 
 	if ( error_code == HELP_REQUESTED )
 	{
-		printf( "\tIn first form, run an interactive session for converting units\n"
-				"\tIn second form, perform the conversion specified on the command line\n"
-				"\tIn third form, perform a batch conversion from file or from pipe if no file is specified\n\n"
+		printf( "    In first form, run an interactive session for converting units\n"
+				"    In second form, perform the conversion specified on the command line\n"
+				"    In third form, perform a batch conversion from file or from pipe if no file\n"
+				"      is specified\n\n"
 				"Options:\n"
-				"\t-b          - batch conversion. convert units from input file.\n"
-				"\t              last argument is expected to be input file. if no\n"
-				"\t              file is specified, standard input is used\n\n"
-				"\t-o[q] name  - output to file specified. q suboption cancels\n"
-				"\t              console output\n\n"
-				"\t-d          - descriptive. includes unit\n\n"
-				"\t-v          - verbose. prints input+output values and units together\n\n"
-				"\t-h, --help  - prints this help message\n\n"
-				"\t--version   - print version and license info\n\n"
+				"    -b         - batch conversion. convert units from input file. last\n"
+				"                 argument is expected to be input file. if no file is specified,\n"
+				"                 STDIN is used\n\n"
+				"    -o[q] name - output to file specified. q suboption cancels console output\n\n"
+				"    -d         - descriptive output (includes output unit)\n\n"
+				"    -v         - verbose output. (include original value, input&output units)\n\n"
+				"    -h, --help - prints this help message\n\n"
+				"    --version  - print version and license info\n\n"
 				"Examples:\n"
-				"\tyucon -v 1 in mm\n"
-				"\tConverts 1 in to mm. Output: 1 in = 25.4 mm\n\n"
-				"\tyucon -b -oq output.txt input.txt\n"
-				"\tPerforms conversions in input.txt and writes results to output.txt. No console output\n\n"
-				"This is free software licensed under the GNU Public License v3.\n"
+				"    $ yucon -v 1 in mm\n"
+				"      Outputs: 1 in = 25.4 mm\n\n"
+				"    $ yucon -b -oq output.txt input.txt\n"
+				"      Performs conversions in input.txt and writes results to output.txt. No\n"
+				"      console output\n\n"
+				"This is free software licensed under the GNU General Public License v3.\n"
 				"Use \'--version\' option for more details.\n"
 				COPYRIGHT_NOTICE
 		);
@@ -531,17 +552,17 @@ void help_interactive( int error_code, ProgramOptions *options, char **token )
 
 	case INCOMPATIBLE_UNITS:
 		printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
-				get_type_str( get_unit_by_name( token[1] )->unit_type ),
-				get_type_str( get_unit_by_name( token[2] )->unit_type )
+				get_type_str( get_unit_by_name( token[1], INPUT_UNIT )->unit_type ),
+				get_type_str( get_unit_by_name( token[2], OUTPUT_UNIT )->unit_type )
 		);
 		break;
 
 	case UNKNOWN_PREFIX:
-		printf( "unknown prefix\n\n" );
+		printf( "unknown metric prefix\n\n" );
 		break;
 
 	case NO_NAME_GIVEN:
-		printf( "no name given after prefix\n\n" );
+		printf( "no name given after metric prefix\n\n" );
 		break;
 
 	case NO_NAME_ALLOWED:
@@ -564,12 +585,12 @@ void help_interactive( int error_code, ProgramOptions *options, char **token )
 	if ( error_code == HELP_REQUESTED )
 	{
 		printf( "Enter a conversion or command. Conversions expected in format:\n"
-				"\t#### <input_unit> <output_unit>\n\n"
-				"COMMANDS:\n"
-				"\thelp    - print this help message\n"
-				"\texit    - exit the program\n"
-				"\tversion - print version and license info\n"
-				"This is free software licensed under the GNU Public License v3.\n"
+				"    #### <input_unit> <output_unit>\n\n"
+				"Commands:\n"
+				"    exit    - exit the program\n"
+				"    help    - print this help message\n"
+				"    version - print version and license info\n\n"
+				"This is free software licensed under the GNU General Public License v3.\n"
 				"Type \'version\' for more details.\n"
 				COPYRIGHT_NOTICE
 		);
@@ -695,8 +716,8 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
  */
 void batch_convert( ProgramOptions *options )
 {
-	FILE *input;
-	FILE *output;
+	FILE *input = NULL;
+	FILE *output = NULL;
 
 	if ( options->input_file != NULL )
 	{
@@ -757,6 +778,11 @@ void batch_convert( ProgramOptions *options )
 
 		generate_output( options, output, token );
 	}
+
+	if ( input != stdin ) fclose( input );
+	if ( output ) fclose( output );
+
+	delete_recall_data();
 }
 
 /* args_convert
@@ -789,6 +815,8 @@ void args_convert( ProgramOptions *options )
 	{
 		fclose( output );
 	}
+
+	delete_recall_data();
 }
 
 /* run_command
@@ -900,7 +928,7 @@ void interactive_mode( ProgramOptions *options )
 	//user may have accidentally piped input in which case reading from stdin will cause errors
 	while ( feof(stdin) == 0 )
 	{
-		printf( "> " );
+		printf( "\n> " );
 
 		char line_buffer[MAX_BUFFER_SIZE];
 
@@ -917,4 +945,6 @@ void interactive_mode( ProgramOptions *options )
 			help_interactive( error_code, options, NULL );
 		}
 	}
+
+	delete_recall_data();
 }

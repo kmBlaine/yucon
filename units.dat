@@ -132,7 +132,7 @@ factor=764554.857984
 offset=0
 
 MILLILITER
-names=milliliter,millilitre,cubic-centimeter,cm3,cc
+names=milliliter,millilitre,ml,cubic-centimeter,cm3,cc
 type=volume
 factor=1
 offset=0

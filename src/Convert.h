@@ -38,4 +38,6 @@ char *simple_output_str( double );
 char *descriptive_output_str( double, char* );
 char *verbose_output_str( double, char*, char*, char* );
 
+void delete_recall_data();
+
 #endif /* H_CONVERT_H_ */

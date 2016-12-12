@@ -33,6 +33,9 @@ Yucon - General purpose unit converter
 
 #include "GlobalDefines.h"
 
+#define INPUT_UNIT  0
+#define OUTPUT_UNIT 1
+
 typedef struct Unit Unit;
 struct Unit
 {
@@ -52,7 +55,7 @@ int  add_unit( Unit*, int );
 Unit *remove_unit( int );
 void print_units_list();
 
-Unit *get_unit_by_name( char* );
+Unit *get_unit_by_name( char*, int );
 
 #endif /* H_UNITLIST_H_ */
 

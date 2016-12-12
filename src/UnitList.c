@@ -44,6 +44,8 @@ struct UnitNode
 };
 
 UnitNode list_handle;
+Unit *last_input_unit;
+Unit *last_output_unit;
 
 void delete_names_list( char **names_list )
 {
@@ -191,14 +193,36 @@ int str_match( char *str1, char *str2 )
  *
  * Parameters:
  *   char *name - name string
- *   UnitNode *head - pointer to list to search for units
+ *   int which - determines whether you are retrieving an input or output unit
+ *               when using the 'recall last' function
+ *               use macros defined in UnitList.h
  *
  * Returns: Unit - Unit with matching name if found. Null pointer otherwise.
  */
-Unit *get_unit_by_name( char *name )
+Unit *get_unit_by_name( char *name, int which )
 {
 	UnitNode *head = list_handle.next_unit;
 	Unit *unit = NULL;
+
+	//skip metric prefix if any
+	if ( name[0] == '_' )
+	{
+		name += 2;
+	}
+
+	//if recalling last unit used
+	if ( name[0] == ':' )
+	{
+		if ( which == INPUT_UNIT )
+		{
+			return last_input_unit;
+		}
+		else
+		{
+			return last_output_unit;
+		}
+	}
+
 	int found = 0;
 
 	while ( head && (found == 0) )
@@ -218,6 +242,14 @@ Unit *get_unit_by_name( char *name )
 
 	if ( found )
 	{
+		if ( which == INPUT_UNIT )
+		{
+			last_input_unit = unit;
+		}
+		else
+		{
+			last_output_unit = unit;
+		}
 		return unit;
 	}
 	else

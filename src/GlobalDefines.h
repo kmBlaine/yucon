@@ -40,9 +40,9 @@ Yucon - General purpose unit converter
 #define INTERACTIVE_MODE   2
 
 #define NULL_CHAR         '\0'
-#define VERSION           "ALPHA"
+#define VERSION           "v0.1"
 #define PROGRAM_TITLE     "YUCON - General Purpose Unit Converter - "VERSION"\n"
-#define RELEASE_DATE      "3 Dec 2016"
+#define RELEASE_DATE      "11 Dec 2016"
 #define COPYRIGHT_NOTICE  "Copyright (C) 2016 Blaine Murphy\n"
 
 /* Error Code defines
