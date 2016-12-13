@@ -212,12 +212,7 @@ int load_units_list()
 	units_cfg = fopen( "/etc/yucon/units.dat", "r" );
 
 #pragma message("Using UNIX file path for units.dat file. Yucon expects it at /etc/yucon/units.dat")
-//windows will expect it in Program Files
-#elif defined(_WIN32) || defined(__WIN32__) || (__WINDOWS__)
-	units_cfg = fopen( "C:\\Program Files\\yucon\\units.dat", "r" );
-
-#pragma message("Using Windows file path for units.dat file. Yucon expects it at C:/Program Files/yucon/units.dat")
-//if unable to determine system, default to loading from the current file path
+//if other system, default to loading from the current file path
 #else
 	units_cfg = fopen( "units.dat", "r" );
 
