@@ -143,7 +143,7 @@ double get_prefix_value( char prefix )
 int check_escape_sequences( char **str, double *prefix )
 {
 	int state = RESET;
-	int error_code = 0;
+	int error_status = 0;
 	int pos = 0;
 
 	while ( state != RETURN_STATE )
@@ -170,7 +170,7 @@ int check_escape_sequences( char **str, double *prefix )
 
 			if ( *prefix < 0 )
 			{
-				error_code = UNKNOWN_PREFIX;
+				error_status = UNKNOWN_PREFIX;
 				state = RETURN_STATE;
 			}
 			else
@@ -186,7 +186,7 @@ int check_escape_sequences( char **str, double *prefix )
 			}
 			else if ( str[0][pos] == NULL_CHAR )
 			{
-				error_code = NO_NAME_GIVEN;
+				error_status = NO_NAME_GIVEN;
 				state = RETURN_STATE;
 			}
 			else
@@ -197,11 +197,11 @@ int check_escape_sequences( char **str, double *prefix )
 			break;
 
 		case GET_LAST_UNIT:
-			error_code = RECALL_LAST;
+			error_status = RECALL_LAST;
 
 			if ( str[0][pos] != NULL_CHAR )
 			{
-				error_code = NO_NAME_ALLOWED;
+				error_status = NO_NAME_ALLOWED;
 			}
 
 			state = RETURN_STATE;
@@ -211,7 +211,7 @@ int check_escape_sequences( char **str, double *prefix )
 		pos++;
 	}
 
-	return error_code;
+	return error_status;
 }
 
 void copy_name_for_recall( char *input, char **storage )
@@ -273,7 +273,7 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 	Unit *input_unit = NULL;
 	Unit *output_unit = NULL;
 
-	int error_code = check_escape_sequences( &input_unit_name, &input_prefix );
+	error_code = check_escape_sequences( &input_unit_name, &input_prefix );
 	if ( error_code == RECALL_LAST )
 	{
 		input_unit = get_unit_by_name( input_unit_name, INPUT_UNIT );

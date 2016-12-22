@@ -305,7 +305,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 			//arg may simply be a negative value. check it as a non-special arg
 			else if ( atof(argv[arg]) )
 			{
-				int error_code = check_nondash_arg( options, arg );
+				error_code = check_nondash_arg( options, arg );
 
 				if ( error_code == TRY_ARGS_CONVERT )
 				{
@@ -324,7 +324,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 		}
 		else //else if non dash argument
 		{
-			int error_code = check_nondash_arg( options, arg );
+			error_code = check_nondash_arg( options, arg );
 
 			if ( error_code == TRY_ARGS_CONVERT )
 			{
@@ -353,7 +353,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
  *
  * Returns: nothing
  */
-void help( int error_code, ProgramOptions *options )
+void help( ProgramOptions *options )
 {
 	if ( error_code == VERSION_REQUESTED )
 	{
@@ -507,7 +507,7 @@ void help( int error_code, ProgramOptions *options )
  *
  * Returns: nothing
  */
-void help_interactive( int error_code, ProgramOptions *options, char **token )
+void help_interactive( ProgramOptions *options, char **token )
 {
 	if ( error_code == VERSION_REQUESTED )
 	{
@@ -640,17 +640,17 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 	}
 
 	double conversion = 0;
-	int error_code = get_conversion( token0, token1, token2, &conversion );
+	error_code = get_conversion( token0, token1, token2, &conversion );
 
 	if ( error_code )
 	{
 		if ( options->input_mode == ONE_TIME_MODE )
 		{
-			help( error_code, options );
+			help( options );
 		}
 		else if ( options->input_mode == INTERACTIVE_MODE )
 		{
-			help_interactive( error_code, options, token );
+			help_interactive( options, token );
 		}
 		return;
 	}
@@ -690,7 +690,8 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 		{
 			if ( options->input_mode != BATCH_MODE )
 			{
-				help( OUTPUT_FILE_ERR, options );
+				error_code = OUTPUT_FILE_ERR;
+				help( options );
 			}
 		}
 	}
@@ -730,7 +731,8 @@ void batch_convert( ProgramOptions *options )
 
 		if ( input == NULL )
 		{
-			help( INPUT_FILE_ERR, options );
+			error_code = INPUT_FILE_ERR;
+			help( options );
 			return;
 		}
 	}
@@ -745,7 +747,8 @@ void batch_convert( ProgramOptions *options )
 
 		if ( output == NULL )
 		{
-			help( OUTPUT_FILE_ERR, options );
+			error_code = OUTPUT_FILE_ERR;
+			help( options );
 			fclose( input );
 			return;
 		}
@@ -809,7 +812,8 @@ void args_convert( ProgramOptions *options )
 
 		if ( output == NULL )
 		{
-			help( OUTPUT_FILE_ERR, options );
+			error_code = OUTPUT_FILE_ERR;
+			help( options );
 			return;
 		}
 	}
@@ -922,7 +926,8 @@ void interactive_mode( ProgramOptions *options )
 		//help function distinguishes between input modes
 		//set to non-interactive mode to print command line help messages instead of interactive messages
 		//options->input_mode = ONE_TIME_MODE;
-		help( FILE_OUTPUT_NOT_ALLOWED, options );
+		error_code = FILE_OUTPUT_NOT_ALLOWED;
+		help( options );
 		return;
 	}
 
@@ -939,7 +944,7 @@ void interactive_mode( ProgramOptions *options )
 
 		fgets( line_buffer, MAX_BUFFER_SIZE, stdin );
 
-		int error_code = run_command( line_buffer, options );
+		error_code = run_command( line_buffer, options );
 
 		if ( error_code == EXIT_PROGRAM )
 		{
@@ -947,7 +952,7 @@ void interactive_mode( ProgramOptions *options )
 		}
 		else if ( error_code )
 		{
-			help_interactive( error_code, options, NULL );
+			help_interactive( options, NULL );
 		}
 	}
 

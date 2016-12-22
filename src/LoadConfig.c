@@ -34,6 +34,18 @@ Yucon - General purpose unit converter
 #include <string.h>
 #include <stdio.h>
 
+const char *length = "length";
+const char *volume = "volume";
+const char *area = "area";
+const char *energy = "energy";
+const char *power = "power";
+const char *mass = "mass";
+const char *force = "force";
+const char *torque = "torque";
+const char *speed = "speed";
+const char *pressure = "pressure";
+const char *temp = "temperature";
+
 /* names_count
  *
  * Purpose: counts up the number of names in the names line of units.cfg

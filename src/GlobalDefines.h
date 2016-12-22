@@ -108,22 +108,25 @@ Yucon - General purpose unit converter
 #define PRESSURE 10
 #define TEMP     11
 
+extern int error_code;
+extern char *error_point;
+
 //STRING CONSTANTS FOR STANDARD UNIT TYPE NAMES
 //GCC will issue warnings for these definitions although they are valid
 //and used in other modules. Temporarily disable unused variable warnings
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
-static const char *length = "length";
-static const char *volume = "volume";
-static const char *area = "area";
-static const char *energy = "energy";
-static const char *power = "power";
-static const char *mass = "mass";
-static const char *force = "force";
-static const char *torque = "torque";
-static const char *speed = "speed";
-static const char *pressure = "pressure";
-static const char *temp = "temperature";
+extern const char *length;
+extern const char *volume;
+extern const char *area;
+extern const char *energy;
+extern const char *power;
+extern const char *mass;
+extern const char *force;
+extern const char *torque;
+extern const char *speed;
+extern const char *pressure;
+extern const char *temp;
 //enable unused variable warnings
 #pragma GCC diagnostic pop
 

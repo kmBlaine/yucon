@@ -32,14 +32,16 @@ Yucon - General purpose unit converter
 #include "Interpreter.h"
 #include "LoadConfig.h"
 
+int error_code;
+char *error_point;
 
 int main( int argc, char *argv[] )
 {
-	int error_code = load_units_list();
+	error_code = load_units_list();
 
 	if ( error_code )
 	{
-		help( error_code, NULL );
+		help( NULL );
 		return EXIT_SUCCESS;
 	}
 
@@ -48,7 +50,7 @@ int main( int argc, char *argv[] )
 
 	if ( error_code )
 	{
-		help( error_code, &options );
+		help( &options );
 		return EXIT_SUCCESS;
 	}
 
