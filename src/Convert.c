@@ -48,6 +48,9 @@ static double last_number;
 static char *last_input_name;
 static char *last_output_name;
 
+static char *get_input_unit = "input unit";
+static char *get_output_unit = "output unit";
+
 /* get_prefix_value
  *
  * Purpose: returns the numerical constant associated with a valid metric prefix
@@ -280,11 +283,13 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 
 		if ( input_unit == NULL )
 		{
-			return INPUT_UNIT_UNSET;
+			error_point = get_input_unit; //preemptively set error point for external help function
+			return RECALL_UNSET;
 		}
 	}
 	else if ( error_code )
 	{
+		error_point = input_unit_name;
 		return error_code;
 	}
 	else
@@ -294,7 +299,8 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 	//if the units weren't found, return appropriate error
 	if ( input_unit == NULL )
 	{
-		return UNIT_FROM_NF;
+		error_point = input_unit_name;
+		return UNIT_NF;
 	}
 	if ( error_code != RECALL_LAST )
 	{
@@ -309,11 +315,13 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 
 		if ( output_unit == NULL )
 		{
-			return OUTPUT_UNIT_UNSET;
+			error_point = get_output_unit;
+			return RECALL_UNSET;
 		}
 	}
 	else if ( error_code )
 	{
+		error_point = output_unit_name;
 		return error_code;
 	}
 	else
@@ -323,7 +331,8 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 	//if unit was not found, return an error
 	if ( output_unit == NULL )
 	{
-		return UNIT_TO_NF;
+		error_point = output_unit_name;
+		return UNIT_NF;
 	}
 	if ( error_code != RECALL_LAST )
 	{

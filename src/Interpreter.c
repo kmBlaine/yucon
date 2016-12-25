@@ -49,6 +49,10 @@ Yucon - General purpose unit converter
 #define MAX_BUFFER_SIZE 128
 #define MAX_TOKENS      4
 
+static const char *dash_b = "-b: input file expected as last argument";
+static const char *dash_o = "-o: expected output file name";
+static const char *conversion_incomplete = "incomplete conversion";
+
 /* get_type_str
  *
  * Purpose: given the internal type code for a unit, returns a string
@@ -172,6 +176,7 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 		//if we reached this point, too many args
 		else
 		{
+			error_point = dash_b;
 			options->last_arg = options->argv[arg + 1];
 			return TOO_MANY_ARGS;
 		}
@@ -189,11 +194,12 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 		}
 		else if ( (options->argc - arg) < 3 )
 		{
+			error_point = conversion_incomplete;
 			return NOT_ENOUGH_ARGS;
 		}
 		else
 		{
-			options->last_arg = options->argv[arg + 3]; //set last_arg to the unexpected trailing argument
+			error_point = options->argv[arg + 3]; //set last_arg to the unexpected trailing argument
 			return TOO_MANY_ARGS; //there is a trailing argument or arguments
 		}
 	}
@@ -282,7 +288,11 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 				options->output_mode = VERBOSE_MODE;
 				//if there are enough args, set next arg to filename
 				if ( arg < (argc - 1) ){ options->output_file = argv[++arg]; }
-				else { return NOT_ENOUGH_ARGS; } //else return error
+				else
+				{
+					error_point = dash_o;
+					return NOT_ENOUGH_ARGS;
+				} //else return error
 			}
 			//if quiet output file mode
 			else if ( strcmp( argv[arg], "-oq" ) == 0 )
@@ -290,7 +300,11 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 				options->output_mode = QUIET_MODE;
 				//if there are enough args, set next arg to filename
 				if ( arg < (argc - 1) ){ options->input_file = argv[++arg]; }
-				else { return NOT_ENOUGH_ARGS; }
+				else
+				{
+					error_point = dash_o;
+					return NOT_ENOUGH_ARGS;
+				}
 			}
 			//if descriptive format, set descriptive format option
 			else if ( strcmp( argv[arg], "-d" ) == 0 )
@@ -369,14 +383,7 @@ void help( ProgramOptions *options )
 	switch ( error_code )
 	{
 	case NOT_ENOUGH_ARGS:
-		if ( options->output_mode != STDOUT_MODE )
-		{
-			printf( "%s: expected output file name\n\n", options->last_arg );
-		}
-		else
-		{
-			printf( "incomplete conversion. Expected an input and output unit\n\n" );
-		}
+		printf( "%s: not enough arguments\n\n", error_point );
 		break;
 
 	case UNRECOGNIZED_ARG:
@@ -384,12 +391,7 @@ void help( ProgramOptions *options )
 		break;
 
 	case TOO_MANY_ARGS:
-		if ( options->input_mode == BATCH_MODE )
-		{
-			printf( "-b: expects input file as last argument: " );
-		}
-		printf( "found unexpected trailing argument: %s\n\n", options->last_arg );
-
+		printf( "%s: too many arguments\n\n", error_point );
 		break;
 
 	case NONNUMERIC_INPUT:
@@ -400,12 +402,8 @@ void help( ProgramOptions *options )
 		printf( "out of range value: %s\n\n", options->argv[options->argc-3] );
 		break;
 
-	case UNIT_FROM_NF:
-		printf( "converting from unknown unit: %s\n\n", options->argv[options->argc-2] );
-		break;
-
-	case UNIT_TO_NF:
-		printf( "converting to unknown unit: %s\n\n", options->argv[options->argc-1] );
+	case UNIT_NF:
+		printf( "%s: unit not found\n\n", error_point );
 		break;
 
 	case INCOMPATIBLE_UNITS:
@@ -428,27 +426,23 @@ void help( ProgramOptions *options )
 		break;
 
 	case FILE_OUTPUT_NOT_ALLOWED:
-		printf( "file output not allowed in interactive mode\n\n");
+		printf( "file output not allowed in interactive mode\n\n" );
 		break;
 
 	case UNKNOWN_PREFIX:
-		printf( "unknown metric prefix\n\n" );
+		printf( "%s: unknown metric prefix\n\n", error_point );
 		break;
 
 	case NO_NAME_GIVEN:
-		printf( "no name given after metric prefix\n\n" );
+		printf( "%s: no unit given after metric prefix\n\n", error_point );
 		break;
 
 	case NO_NAME_ALLOWED:
-		printf( "no name allowed after \':\' (recall last) function\n\n" );
+		printf( "%s: nothing allowed after \':\' (recall last)\n\n", error_point );
 		break;
 
-	case INPUT_UNIT_UNSET:
-		printf( "unable to recall last input. Not set\n\n" );
-		break;
-
-	case OUTPUT_UNIT_UNSET:
-		printf( "unable to recall last output. Not set\n\n" );
+	case RECALL_UNSET:
+		printf( "%s: unable to recall last (not set)\n\n", error_point );
 		break;
 
 	default:
@@ -542,12 +536,8 @@ void help_interactive( ProgramOptions *options, char **token )
 		printf( "value out of range\n\n" );
 		break;
 
-	case UNIT_FROM_NF:
+	case UNIT_NF:
 		printf( "converting from unknown unit: %s\n\n", token[1] );
-		break;
-
-	case UNIT_TO_NF:
-		printf( "converting to unknown unit: %s\n\n", token[2] );
 		break;
 
 	case INCOMPATIBLE_UNITS:
@@ -569,12 +559,8 @@ void help_interactive( ProgramOptions *options, char **token )
 		printf( "no name allowed after \':\' (recall last) function\n\n" );
 		break;
 
-	case INPUT_UNIT_UNSET:
+	case RECALL_UNSET:
 		printf( "unable to recall last input. Not set\n\n" );
-		break;
-
-	case OUTPUT_UNIT_UNSET:
-		printf( "unable to recall last output. Not set\n\n" );
 		break;
 
 	default:

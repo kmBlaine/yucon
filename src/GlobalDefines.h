@@ -40,9 +40,9 @@ Yucon - General purpose unit converter
 #define INTERACTIVE_MODE   2
 
 #define NULL_CHAR         '\0'
-#define VERSION           "v0.1"
+#define VERSION           "v0.1.1"
 #define PROGRAM_TITLE     "YUCON - General Purpose Unit Converter - "VERSION"\n"
-#define RELEASE_DATE      "12 Dec 2016"
+#define RELEASE_DATE      "24 Dec 2016"
 #define COPYRIGHT_NOTICE  "Copyright (C) 2016 Blaine Murphy\n"
 
 /* Error Code defines
@@ -69,18 +69,16 @@ Yucon - General purpose unit converter
 #define TOO_MANY_ARGS      3
 #define NONNUMERIC_INPUT   4
 #define INVALID_INPUT      5
-#define UNIT_FROM_NF       6
-#define UNIT_TO_NF         7
-#define INCOMPATIBLE_UNITS 8
-#define OUTPUT_FILE_ERR    9
-#define UNITS_FILE_MISSING 10
-#define INPUT_FILE_ERR     11
-#define FILE_OUTPUT_NOT_ALLOWED 12
-#define UNKNOWN_PREFIX     13
-#define NO_NAME_GIVEN      14
-#define NO_NAME_ALLOWED    15
-#define INPUT_UNIT_UNSET   16
-#define OUTPUT_UNIT_UNSET  17
+#define UNIT_NF            6
+#define INCOMPATIBLE_UNITS 7
+#define OUTPUT_FILE_ERR    8
+#define UNITS_FILE_MISSING 9
+#define INPUT_FILE_ERR     10
+#define FILE_OUTPUT_NOT_ALLOWED 11
+#define UNKNOWN_PREFIX     12
+#define NO_NAME_GIVEN      13
+#define NO_NAME_ALLOWED    14
+#define RECALL_UNSET       15
 
 /* INTERNAL COMMAND DEFINES
  *
