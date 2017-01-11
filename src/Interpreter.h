@@ -78,6 +78,6 @@ int  set_program_options( ProgramOptions*, int, char** );
 void interactive_mode( ProgramOptions* );
 void batch_convert( ProgramOptions* );
 void args_convert( ProgramOptions* );
-void help( ProgramOptions* );
+void help( ProgramOptions*, char** );
 
 #endif /* H_INTERPRETER_H_ */

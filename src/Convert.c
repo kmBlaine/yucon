@@ -283,13 +283,13 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 
 		if ( input_unit == NULL )
 		{
-			error_point = get_input_unit; //preemptively set error point for external help function
+			error_msg = get_input_unit; //preemptively set error point for external help function
 			return RECALL_UNSET;
 		}
 	}
 	else if ( error_code )
 	{
-		error_point = input_unit_name;
+		error_msg = input_unit_name;
 		return error_code;
 	}
 	else
@@ -299,7 +299,7 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 	//if the units weren't found, return appropriate error
 	if ( input_unit == NULL )
 	{
-		error_point = input_unit_name;
+		error_msg = input_unit_name;
 		return UNIT_NF;
 	}
 	if ( error_code != RECALL_LAST )
@@ -315,13 +315,13 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 
 		if ( output_unit == NULL )
 		{
-			error_point = get_output_unit;
+			error_msg = get_output_unit;
 			return RECALL_UNSET;
 		}
 	}
 	else if ( error_code )
 	{
-		error_point = output_unit_name;
+		error_msg = output_unit_name;
 		return error_code;
 	}
 	else
@@ -331,7 +331,7 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 	//if unit was not found, return an error
 	if ( output_unit == NULL )
 	{
-		error_point = output_unit_name;
+		error_msg = output_unit_name;
 		return UNIT_NF;
 	}
 	if ( error_code != RECALL_LAST )

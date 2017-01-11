@@ -176,7 +176,7 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 		//if we reached this point, too many args
 		else
 		{
-			error_point = dash_b;
+			error_msg = dash_b;
 			options->last_arg = options->argv[arg + 1];
 			return TOO_MANY_ARGS;
 		}
@@ -194,12 +194,12 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 		}
 		else if ( (options->argc - arg) < 3 )
 		{
-			error_point = conversion_incomplete;
+			error_msg = conversion_incomplete;
 			return NOT_ENOUGH_ARGS;
 		}
 		else
 		{
-			error_point = options->argv[arg + 3]; //set last_arg to the unexpected trailing argument
+			error_msg = options->argv[arg + 3]; //set last_arg to the unexpected trailing argument
 			return TOO_MANY_ARGS; //there is a trailing argument or arguments
 		}
 	}
@@ -290,7 +290,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 				if ( arg < (argc - 1) ){ options->output_file = argv[++arg]; }
 				else
 				{
-					error_point = dash_o;
+					error_msg = dash_o;
 					return NOT_ENOUGH_ARGS;
 				} //else return error
 			}
@@ -302,7 +302,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 				if ( arg < (argc - 1) ){ options->input_file = argv[++arg]; }
 				else
 				{
-					error_point = dash_o;
+					error_msg = dash_o;
 					return NOT_ENOUGH_ARGS;
 				}
 			}
@@ -367,7 +367,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
  *
  * Returns: nothing
  */
-void help( ProgramOptions *options )
+void help( ProgramOptions *options, char **token )
 {
 	if ( error_code == VERSION_REQUESTED )
 	{
@@ -383,15 +383,15 @@ void help( ProgramOptions *options )
 	switch ( error_code )
 	{
 	case NOT_ENOUGH_ARGS:
-		printf( "%s: not enough arguments\n\n", error_point );
+		printf( "%s: not enough arguments\n\n", error_msg );
 		break;
 
 	case UNRECOGNIZED_ARG:
-		printf( "unrecognized option: %s\n\n", options->last_arg );
+		printf( "unrecognized %s: %s\n\n", error_msg, options->last_arg );
 		break;
 
 	case TOO_MANY_ARGS:
-		printf( "%s: too many arguments\n\n", error_point );
+		printf( "%s: too many arguments\n\n", error_msg );
 		break;
 
 	case NONNUMERIC_INPUT:
@@ -403,14 +403,24 @@ void help( ProgramOptions *options )
 		break;
 
 	case UNIT_NF:
-		printf( "%s: unit not found\n\n", error_point );
+		printf( "%s: unit not found\n\n", error_msg );
 		break;
 
 	case INCOMPATIBLE_UNITS:
-		printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
-				get_type_str( get_unit_by_name( options->argv[options->argc-2], INPUT_UNIT )->unit_type ),
-				get_type_str( get_unit_by_name( options->argv[options->argc-1], OUTPUT_UNIT )->unit_type )
-		);
+		if ( options->input_mode == ONE_TIME_MODE )
+		{
+			printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
+					get_type_str( get_unit_by_name( options->argv[options->argc-2], INPUT_UNIT )->unit_type ),
+					get_type_str( get_unit_by_name( options->argv[options->argc-1], OUTPUT_UNIT )->unit_type )
+			);
+		}
+		else
+		{
+			printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
+					get_type_str( get_unit_by_name( token[1], INPUT_UNIT )->unit_type ),
+					get_type_str( get_unit_by_name( token[2], OUTPUT_UNIT )->unit_type )
+			);
+		}
 		break;
 
 	case OUTPUT_FILE_ERR:
@@ -430,61 +440,91 @@ void help( ProgramOptions *options )
 		break;
 
 	case UNKNOWN_PREFIX:
-		printf( "%s: unknown metric prefix\n\n", error_point );
+		printf( "%s: unknown metric prefix\n\n", error_msg );
 		break;
 
 	case NO_NAME_GIVEN:
-		printf( "%s: no unit given after metric prefix\n\n", error_point );
+		printf( "%s: no unit given after metric prefix\n\n", error_msg );
 		break;
 
 	case NO_NAME_ALLOWED:
-		printf( "%s: nothing allowed after \':\' (recall last)\n\n", error_point );
+		printf( "%s: nothing allowed after \':\' (recall last)\n\n", error_msg );
 		break;
 
 	case RECALL_UNSET:
-		printf( "%s: unable to recall last (not set)\n\n", error_point );
+		printf( "%s: unable to recall last (not set)\n\n", error_msg );
 		break;
 
 	default:
+		if ( error_code != HELP_REQUESTED )
+		{
+			printf( "unknown error: %d\n\n", error_code );
+		}
 		break;
 	}
 
-	printf( PROGRAM_TITLE
-			"Usage:\n"
-			"    yucon [options]\n"
-			"    yucon [options] #### <input_unit> <output_unit>\n"
-			"    yucon -b [options] [input file]\n\n"
-	);
+	if ( options->input_mode == ONE_TIME_MODE )
+	{
+		printf( PROGRAM_TITLE
+				"Usage:\n"
+				"    yucon [options]\n"
+				"    yucon [options] #### <input_unit> <output_unit>\n"
+				"    yucon -b [options] [input file]\n\n"
+		);
+	}
 
 	if ( error_code == HELP_REQUESTED )
 	{
-		printf( "    In first form, run an interactive session for converting units\n"
-				"    In second form, perform the conversion specified on the command line\n"
-				"    In third form, perform a batch conversion from file or from pipe if no file\n"
-				"      is specified\n\n"
-				"Options:\n"
-				"    -b         - batch conversion. convert units from input file. last\n"
-				"                 argument is expected to be input file. if no file is specified,\n"
-				"                 STDIN is used\n\n"
-				"    -o[q] name - output to file specified. q suboption cancels console output\n\n"
-				"    -d         - descriptive output (includes output unit)\n\n"
-				"    -v         - verbose output. (include original value, input&output units)\n\n"
-				"    -h, --help - prints this help message\n\n"
-				"    --version  - print version and license info\n\n"
-				"Examples:\n"
-				"    $ yucon -v 1 in mm\n"
-				"      Outputs: 1 in = 25.4 mm\n\n"
-				"    $ yucon -b -oq output.txt input.txt\n"
-				"      Performs conversions in input.txt and writes results to output.txt. No\n"
-				"      console output\n\n"
-				"This is free software licensed under the GNU General Public License v3.\n"
-				"Use \'--version\' option for more details.\n"
-				COPYRIGHT_NOTICE
-		);
+		if ( options->input_mode == ONE_TIME_MODE )
+		{
+			printf( "    In first form, run an interactive session for converting units\n"
+					"    In second form, perform the conversion specified on the command line\n"
+					"    In third form, perform a batch conversion from file or from pipe if no file\n"
+					"      is specified\n\n"
+					"Options:\n"
+					"    -b         - batch conversion. convert units from input file. last\n"
+					"                 argument is expected to be input file. if no file is specified,\n"
+					"                 STDIN is used\n\n"
+					"    -o[q] name - output to file specified. q suboption cancels console output\n\n"
+					"    -d         - descriptive output (includes output unit)\n\n"
+					"    -v         - verbose output. (include original value, input&output units)\n\n"
+					"    -h, --help - prints this help message\n\n"
+					"    --version  - print version and license info\n\n"
+					"Examples:\n"
+					"    $ yucon -v 1 in mm\n"
+					"      Outputs: 1 in = 25.4 mm\n\n"
+					"    $ yucon -b -oq output.txt input.txt\n"
+					"      Performs conversions in input.txt and writes results to output.txt. No\n"
+					"      console output\n\n"
+					"This is free software licensed under the GNU General Public License v3.\n"
+					"Use \'--version\' option for more details.\n"
+					COPYRIGHT_NOTICE
+			);
+		}
+		else
+		{
+			printf( "Enter a conversion or command. Conversions expected in format:\n"
+					"    #### <input_unit> <output_unit>\n\n"
+					"Commands:\n"
+					"    exit    - exit the program\n"
+					"    help    - print this help message\n"
+					"    version - print version and license info\n\n"
+					"This is free software licensed under the GNU General Public License v3.\n"
+					"Type \'version\' for more details.\n"
+					COPYRIGHT_NOTICE
+			);
+		}
 	}
 	else
 	{
-		printf( "Try \'-h\' or \'--help\' options for more details\n" );
+		if ( options->input_mode == ONE_TIME_MODE )
+		{
+			printf( "Try \'-h\' or \'--help\' options for more details\n" );
+		}
+		else
+		{
+			printf( "Type \'help' for assistance.\n" );
+		}
 	}
 }
 

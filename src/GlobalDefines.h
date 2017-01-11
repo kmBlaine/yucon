@@ -107,7 +107,7 @@ Yucon - General purpose unit converter
 #define TEMP     11
 
 extern int error_code;
-extern char *error_point;
+extern char *error_msg;
 
 //STRING CONSTANTS FOR STANDARD UNIT TYPE NAMES
 //GCC will issue warnings for these definitions although they are valid

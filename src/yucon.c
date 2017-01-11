@@ -33,7 +33,7 @@ Yucon - General purpose unit converter
 #include "LoadConfig.h"
 
 int error_code;
-char *error_point;
+char *error_msg;
 
 int main( int argc, char *argv[] )
 {
