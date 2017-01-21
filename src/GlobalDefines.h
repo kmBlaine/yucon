@@ -42,8 +42,8 @@ Yucon - General purpose unit converter
 #define NULL_CHAR         '\0'
 #define VERSION           "v0.1.1"
 #define PROGRAM_TITLE     "YUCON - General Purpose Unit Converter - "VERSION"\n"
-#define RELEASE_DATE      "24 Dec 2016"
-#define COPYRIGHT_NOTICE  "Copyright (C) 2016 Blaine Murphy\n"
+#define RELEASE_DATE      "16 Jan 2017"
+#define COPYRIGHT_NOTICE  "Copyright (C) 2016-2017 Blaine Murphy\n"
 
 /* Error Code defines
  *
@@ -92,6 +92,7 @@ Yucon - General purpose unit converter
 #define TRY_ARGS_CONVERT  -3
 #define VERSION_REQUESTED -4
 #define RECALL_LAST       -5
+#define SET_PROGRAM_VAR   -6
 
 //NUMERIC CONSTANTS FOR STANDARD UNIT TYPES
 #define LENGTH   0

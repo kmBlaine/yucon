@@ -41,7 +41,7 @@ int main( int argc, char *argv[] )
 
 	if ( error_code )
 	{
-		help( NULL );
+		help( NULL, NULL ); //safe to set null for a units.dat error
 		return EXIT_SUCCESS;
 	}
 
@@ -50,26 +50,28 @@ int main( int argc, char *argv[] )
 
 	if ( error_code )
 	{
-		help( &options );
-		return EXIT_SUCCESS;
+		options.input_mode = ONE_TIME_MODE; //change input mode to force console help messages
+		help( &options, NULL );
 	}
-
-	switch ( options.input_mode )
+	else
 	{
-	case ONE_TIME_MODE:
-		args_convert( &options );
-		break;
+		switch ( options.input_mode )
+		{
+		case ONE_TIME_MODE:
+			args_convert( &options );
+			break;
 
-	case BATCH_MODE:
-		batch_convert( &options );
-		break;
+		case BATCH_MODE:
+			batch_convert( &options );
+			break;
 
-	case INTERACTIVE_MODE:
-		interactive_mode( &options );
-		break;
+		case INTERACTIVE_MODE:
+			interactive_mode( &options );
+			break;
 
-	default:
-		break;
+		default:
+			break;
+		}
 	}
 
 	delete_units_list();

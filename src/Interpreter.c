@@ -49,9 +49,11 @@ Yucon - General purpose unit converter
 #define MAX_BUFFER_SIZE 128
 #define MAX_TOKENS      4
 
-static const char *dash_b = "-b: input file expected as last argument";
-static const char *dash_o = "-o: expected output file name";
-static const char *conversion_incomplete = "incomplete conversion";
+static char *dash_b = "-b: input file expected as last argument";
+static char *dash_o = "-o: expected output file name";
+static char *conversion_incomplete = "incomplete conversion";
+static char *unrecognized_option = "option";
+static char *unrecognized_command = "command";
 
 /* get_type_str
  *
@@ -203,22 +205,6 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 			return TOO_MANY_ARGS; //there is a trailing argument or arguments
 		}
 	}
-	/*
-	//if in one time mode, and three args left, try to convert
-	else if ( (options->argc - arg) == 3 )
-	{
-		return TRY_ARGS_CONVERT;
-	}
-	//if there are more than three args, not possible. too many args
-	else if ( (options->argc - arg) > 3 )
-	{
-		return UNRECOGNIZED_ARG;
-	}
-	else
-	{
-		return NOT_ENOUGH_ARGS;
-	}
-	*/
 }
 
 /* set_program_options
@@ -333,6 +319,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 			}
 			else
 			{
+				error_msg = unrecognized_option;
 				return UNRECOGNIZED_ARG; //else unrecognized arg. error
 			}
 		}
@@ -484,11 +471,11 @@ void help( ProgramOptions *options, char **token )
 					"Options:\n"
 					"    -b         - batch conversion. convert units from input file. last\n"
 					"                 argument is expected to be input file. if no file is specified,\n"
-					"                 STDIN is used\n\n"
-					"    -o[q] name - output to file specified. q suboption cancels console output\n\n"
-					"    -d         - descriptive output (includes output unit)\n\n"
-					"    -v         - verbose output. (include original value, input&output units)\n\n"
-					"    -h, --help - prints this help message\n\n"
+					"                 STDIN is used\n"
+					"    -o[q] name - output to file specified. q suboption cancels console output\n"
+					"    -d         - descriptive output (includes output unit)\n"
+					"    -v         - verbose output. (include original value, input&output units)\n"
+					"    -h, --help - prints this help message\n"
 					"    --version  - print version and license info\n\n"
 					"Examples:\n"
 					"    $ yucon -v 1 in mm\n"
@@ -525,105 +512,6 @@ void help( ProgramOptions *options, char **token )
 		{
 			printf( "Type \'help' for assistance.\n" );
 		}
-	}
-}
-
-/* help_interactive
- *
- * Purpose: prints help messages specific to the interactive mode
- *   implemented to avoid numerous checks within the previous help
- *   method and because the parameters are not the same
- *
- * Parameters:
- *   int error_code - internal error code to retrieve help on
- *   ProgramOptions *options - pointer to program runtime options struct
- *   char **token - array of user input tokens
- *
- * Returns: nothing
- */
-void help_interactive( ProgramOptions *options, char **token )
-{
-	if ( error_code == VERSION_REQUESTED )
-	{
-		print_version();
-		return;
-	}
-
-	if ( error_code != HELP_REQUESTED )
-	{
-		printf( "Error: ");
-	}
-
-	switch ( error_code )
-	{
-	case NOT_ENOUGH_ARGS:
-		printf( "Not enough arguments\n\n" );
-		break;
-
-	case UNRECOGNIZED_ARG:
-		printf( "unrecognized argument\n\n" );
-		break;
-
-	case TOO_MANY_ARGS:
-		printf( "too many arguments\n\n" );
-		break;
-
-	case NONNUMERIC_INPUT:
-		printf( "unrecognized command\n\n" );
-		break;
-
-	case INVALID_INPUT:
-		printf( "value out of range\n\n" );
-		break;
-
-	case UNIT_NF:
-		printf( "converting from unknown unit: %s\n\n", token[1] );
-		break;
-
-	case INCOMPATIBLE_UNITS:
-		printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
-				get_type_str( get_unit_by_name( token[1], INPUT_UNIT )->unit_type ),
-				get_type_str( get_unit_by_name( token[2], OUTPUT_UNIT )->unit_type )
-		);
-		break;
-
-	case UNKNOWN_PREFIX:
-		printf( "unknown metric prefix\n\n" );
-		break;
-
-	case NO_NAME_GIVEN:
-		printf( "no name given after metric prefix\n\n" );
-		break;
-
-	case NO_NAME_ALLOWED:
-		printf( "no name allowed after \':\' (recall last) function\n\n" );
-		break;
-
-	case RECALL_UNSET:
-		printf( "unable to recall last input. Not set\n\n" );
-		break;
-
-	default:
-		if ( error_code != HELP_REQUESTED ){ printf( "unknown error.\n\n" ); }
-		break;
-	}
-
-	if ( error_code == HELP_REQUESTED )
-	{
-		printf( "Enter a conversion or command. Conversions expected in format:\n"
-				"    #### <input_unit> <output_unit>\n\n"
-				"Commands:\n"
-				"    exit    - exit the program\n"
-				"    help    - print this help message\n"
-				"    version - print version and license info\n\n"
-				"This is free software licensed under the GNU General Public License v3.\n"
-				"Type \'version\' for more details.\n"
-				COPYRIGHT_NOTICE
-		);
-	}
-	else
-	{
-		printf( "Type \'help' for assistance.\n" );
 	}
 }
 
@@ -670,14 +558,7 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 
 	if ( error_code )
 	{
-		if ( options->input_mode == ONE_TIME_MODE )
-		{
-			help( options );
-		}
-		else if ( options->input_mode == INTERACTIVE_MODE )
-		{
-			help_interactive( options, token );
-		}
+		help( options, token );
 		return;
 	}
 
@@ -717,7 +598,7 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 			if ( options->input_mode != BATCH_MODE )
 			{
 				error_code = OUTPUT_FILE_ERR;
-				help( options );
+				help( options, NULL ); //file output is not allowed in interactive, safe to set args to NULL
 			}
 		}
 	}
@@ -758,7 +639,7 @@ void batch_convert( ProgramOptions *options )
 		if ( input == NULL )
 		{
 			error_code = INPUT_FILE_ERR;
-			help( options );
+			help( options, NULL ); //input file error currently a non-specific message. safe to set NULL
 			return;
 		}
 	}
@@ -774,7 +655,7 @@ void batch_convert( ProgramOptions *options )
 		if ( output == NULL )
 		{
 			error_code = OUTPUT_FILE_ERR;
-			help( options );
+			help( options, NULL );
 			fclose( input );
 			return;
 		}
@@ -839,7 +720,7 @@ void args_convert( ProgramOptions *options )
 		if ( output == NULL )
 		{
 			error_code = OUTPUT_FILE_ERR;
-			help( options );
+			help( options, NULL );
 			return;
 		}
 	}
@@ -853,6 +734,13 @@ void args_convert( ProgramOptions *options )
 
 	delete_recall_data();
 }
+
+#define RETURN_STATE    -1
+#define GET_CMD         0
+#define GET_INPUT_UNIT  2
+#define GET_OUTPUT_UNIT 3
+#define GET_VAR         4
+#define GET_VAR_STATE   5
 
 /* run_command
  *
@@ -884,54 +772,101 @@ int run_command( char *str, ProgramOptions *options )
 		}
 	}
 
-	//tokenize the input line. first initialize the pointer array
+	//initialize the pointer array to be all null values
 	char *token[MAX_TOKENS];
 	for ( int pos = 0; pos < MAX_TOKENS; pos++ )
 	{
 		token[pos] = NULL;
 	}
 
-	//get initial token
+	int state = GET_CMD;
 	token[0] = strtok( str, " " );
 
-	//get remaining tokens if any. exit loop if more tokens appeared
-	for ( int pos = 1; token[pos-1]; pos++ )
+	//state machine for parsing the input line
+	for ( int pos = 1; pos < MAX_TOKENS && state != RETURN_STATE; pos++ )
 	{
-		//CHANGE THIS TO ERROR RETURN?? Blaine M. - 3 DEC 2016
-		if ( pos >= MAX_TOKENS )
+		switch ( state )
 		{
+		case GET_CMD:
+			if ( strcmp( token[0], "exit" ) == 0 )
+			{
+				error_code = EXIT_PROGRAM;
+				state = RETURN_STATE;
+			}
+			else if ( strcmp( token[0], "help" ) == 0 )
+			{
+				error_code = HELP_REQUESTED;
+				state = RETURN_STATE;
+			}
+			else if ( strcmp( token[0], "version" ) == 0 )
+			{
+				error_code = VERSION_REQUESTED;
+				state = RETURN_STATE;
+			}
+			else if ( is_double( token[0] ) )
+			{
+				state = GET_INPUT_UNIT;
+			}
+			else
+			{
+				error_code = UNRECOGNIZED_ARG;
+				error_msg = unrecognized_command;
+				options->last_arg = token[0];
+				state = RETURN_STATE;
+			}
 			break;
+
+		case GET_INPUT_UNIT:
+			if ( token[pos-1] )
+			{
+				state = GET_OUTPUT_UNIT;
+			}
+			else
+			{
+				error_code = NOT_ENOUGH_ARGS;
+				error_msg = conversion_incomplete;
+				state = RETURN_STATE;
+			}
+			break;
+
+		case GET_OUTPUT_UNIT:
+			if ( token[pos-1] )
+			{
+				error_code = TRY_ARGS_CONVERT;
+				state = RETURN_STATE;
+			}
+			else
+			{
+				error_code = NOT_ENOUGH_ARGS;
+				error_msg = conversion_incomplete;
+				state = RETURN_STATE;
+			}
+			break;
+
+		case GET_VAR:
+			break;
+
+		case GET_VAR_STATE:
+			break;
+
 		}
 
 		token[pos] = strtok( NULL, " " );
 	}
 
-	if ( strcmp( token[0], "exit" ) == 0 )
+	switch ( error_code )
 	{
-		return EXIT_PROGRAM;
-	}
-	else if ( strcmp( token[0], "help" ) == 0 )
-	{
-		return HELP_REQUESTED;
-	}
-	else if ( strcmp( token[0], "version" ) == 0 )
-	{
-		return VERSION_REQUESTED;
-	}
-	else
-	{
-		if ( !is_double( token[0] ) )
-		{
-			return NONNUMERIC_INPUT;
-		}
+	case TRY_ARGS_CONVERT:
+		generate_output( options, NULL, token );
+		break;
 
-		if ( (token[1] == NULL) || (token[2] == NULL) )
-		{
-			return NOT_ENOUGH_ARGS;
-		}
-	}
+	case EXIT_PROGRAM:
+		return error_code;
 
-	generate_output( options, NULL, token );
+	default:
+		help( options, token );
+		return error_code;
+	}
 
 	return 0;
 }
@@ -953,7 +888,7 @@ void interactive_mode( ProgramOptions *options )
 		//set to non-interactive mode to print command line help messages instead of interactive messages
 		//options->input_mode = ONE_TIME_MODE;
 		error_code = FILE_OUTPUT_NOT_ALLOWED;
-		help( options );
+		help( options, NULL ); //safe to set NULL here
 		return;
 	}
 
@@ -975,10 +910,6 @@ void interactive_mode( ProgramOptions *options )
 		if ( error_code == EXIT_PROGRAM )
 		{
 			break;
-		}
-		else if ( error_code )
-		{
-			help_interactive( options, NULL );
 		}
 	}
 
