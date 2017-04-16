@@ -240,7 +240,7 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 	options->input_file = NULL;
 	options->output_mode = STDOUT_MODE;
 	options->output_file = NULL;
-	options->format = SIMPLE_FORMAT;
+	options->format = DESCRIPTIVE_FORMAT;
 
 	//if any option is -h or --help, return HELP error code
 	for ( int arg = 1; arg < argc; arg++ )
@@ -292,7 +292,14 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 					return NOT_ENOUGH_ARGS;
 				}
 			}
+			//if simple format, set simple format option
+			else if ( strcmp( argv[arg], "-s" ) == 0 )
+			{
+				options->format = SIMPLE_FORMAT;
+			}
 			//if descriptive format, set descriptive format option
+			//TECHNICALLY THIS OPTION DOES NOTHING SINCE AS OF v0.1.1 DEFAULT FORMAT IS DESCRIPTIVE
+			//@kmBlaine REMOVE IN v0.2
 			else if ( strcmp( argv[arg], "-d" ) == 0 )
 			{
 				options->format = DESCRIPTIVE_FORMAT;
@@ -473,6 +480,7 @@ void help( ProgramOptions *options, char **token )
 					"                 argument is expected to be input file. if no file is specified,\n"
 					"                 STDIN is used\n"
 					"    -o[q] name - output to file specified. q suboption cancels console output\n"
+					"    -s         - simple output (excludes output unit)\n"
 					"    -d         - descriptive output (includes output unit)\n"
 					"    -v         - verbose output. (include original value, input&output units)\n"
 					"    -h, --help - prints this help message\n"
@@ -570,15 +578,14 @@ void generate_output( ProgramOptions *options, FILE *output, char **token )
 		output_str = simple_output_str( conversion );
 		break;
 
-	case DESCRIPTIVE_FORMAT:
-		output_str = descriptive_output_str( conversion, token2 );
-		break;
-
 	case VERBOSE_FORMAT:
 		output_str = verbose_output_str( conversion, token0, token1, token2 );
 		break;
 
+	//program defaults to a descriptive string. this way we also ensure the string is never empty.
+	//see notes below
 	default:
+		output_str = descriptive_output_str( conversion, token2 );
 		break;
 	}
 
