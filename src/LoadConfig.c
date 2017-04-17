@@ -45,6 +45,7 @@ const char *torque = "torque";
 const char *speed = "speed";
 const char *pressure = "pressure";
 const char *temp = "temperature";
+const char *feconomy = "fuel economy";
 
 /* names_count
  *
@@ -198,6 +199,10 @@ int get_unit_type( char *str )
 	if ( strncmp( str, temp, 11) == 0 )
 	{
 		return TEMP;
+	}
+	if ( strncmp( str, feconomy, 12 ) == 0 )
+	{
+		return FECONOMY;
 	}
 
 	return -1; //return -1 on failure

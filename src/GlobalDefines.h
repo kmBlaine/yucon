@@ -42,7 +42,7 @@ Yucon - General purpose unit converter
 #define NULL_CHAR         '\0'
 #define VERSION           "v0.1.1"
 #define PROGRAM_TITLE     "YUCON - General Purpose Unit Converter - "VERSION"\n"
-#define RELEASE_DATE      "16 Jan 2017"
+#define RELEASE_DATE      "16 Apr 2017"
 #define COPYRIGHT_NOTICE  "Copyright (C) 2016-2017 Blaine Murphy\n"
 
 /* Error Code defines
@@ -97,15 +97,16 @@ Yucon - General purpose unit converter
 //NUMERIC CONSTANTS FOR STANDARD UNIT TYPES
 #define LENGTH   0
 #define VOLUME   1
-#define AREA     3
-#define ENERGY   4
-#define POWER    5
-#define MASS     6
-#define FORCE    7
-#define TORQUE   8
-#define SPEED    9
-#define PRESSURE 10
-#define TEMP     11
+#define AREA     2
+#define ENERGY   3
+#define POWER    4
+#define MASS     5
+#define FORCE    6
+#define TORQUE   7
+#define SPEED    8
+#define PRESSURE 9
+#define TEMP     10
+#define FECONOMY 11
 
 extern int error_code;
 extern char *error_msg;
@@ -126,6 +127,7 @@ extern const char *torque;
 extern const char *speed;
 extern const char *pressure;
 extern const char *temp;
+extern const char *feconomy;
 //enable unused variable warnings
 #pragma GCC diagnostic pop
 

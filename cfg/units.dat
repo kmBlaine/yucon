@@ -435,3 +435,15 @@ names=rankine,R,Ra
 type=temperature
 factor=0.555555555555556
 offset=0
+
+LITERS PER 100KM
+names=liters-per-100-kilometers,L/100km,l/100km
+type=fuel economy
+factor=1
+offset=0
+
+LITERS PER KM
+names=liters-per-kilometer,L/km,l/km
+type=fuel economy
+factor=100
+offset=0

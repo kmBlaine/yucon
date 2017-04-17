@@ -102,6 +102,9 @@ const char *get_type_str( int unit_type )
 	case TEMP:
 		return temp;
 
+	case FECONOMY:
+		return feconomy;
+
 	default:
 		return length;
 	}
@@ -501,9 +504,11 @@ void help( ProgramOptions *options, char **token )
 			printf( "Enter a conversion or command. Conversions expected in format:\n"
 					"    #### <input_unit> <output_unit>\n\n"
 					"Commands:\n"
-					"    exit    - exit the program\n"
-					"    help    - print this help message\n"
-					"    version - print version and license info\n\n"
+					"    exit               - exit the program\n"
+					"    help               - print this help message\n"
+					"    get <var>          - get the state of the given program variable\n"
+					"    set <var> <state>  - set a program variable to the given state\n"
+					"    version            - print version and license info\n\n"
 					"This is free software licensed under the GNU General Public License v3.\n"
 					"Type \'version\' for more details.\n"
 					COPYRIGHT_NOTICE
@@ -809,6 +814,11 @@ int run_command( char *str, ProgramOptions *options )
 			{
 				error_code = VERSION_REQUESTED;
 				state = RETURN_STATE;
+			}
+			else if ( strcmp( token[0], "set" ) == 0 )
+			{
+				error_code = SET_PROGRAM_VAR;
+				state = GET_VAR;
 			}
 			else if ( is_double( token[0] ) )
 			{
