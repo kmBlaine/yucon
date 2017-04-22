@@ -13,13 +13,13 @@ echo 'Creating config file path: /etc/yucon/'
 
 mkdir --parents /etc/yucon/
 
-echo 'Copying units.dat file to config path...'
+echo 'Copying units.cfg file to config path...'
 
-cp ./cfg/units.dat /etc/yucon/
+cp ./units.cfg /etc/yucon/
 
 echo 'Copying binary...'
 
-cp ./bin/yucon-linux /usr/bin/
+cp ./yucon-linux /usr/bin/
 mv /usr/bin/yucon-linux /usr/bin/yucon
 chown root:root /usr/bin/yucon
 chmod 755 /usr/bin/yucon

@@ -226,7 +226,7 @@ int load_units_list()
 //change path based on the platform this will be built and run on
 //Linux will expect config file in /etc/yucon/
 #if defined(__unix__) || defined(__linux__) || defined(__gnu_linux__)
-	units_cfg = fopen( "/etc/yucon/units.dat", "r" );
+	units_cfg = fopen( "/etc/yucon/units.cfg", "r" );
 
 #pragma message("Using UNIX file path for units.cfg file. Yucon expects it at /etc/yucon/units.cfg")
 //if other system, default to loading from the current file path
