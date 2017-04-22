@@ -42,9 +42,9 @@ Yucon - General purpose unit converter
 #define STDOUT_MODE        0
 #define VERBOSE_MODE       1
 #define QUIET_MODE         2
-#define SIMPLE_FORMAT      0
-#define DESCRIPTIVE_FORMAT 1
-#define VERBOSE_FORMAT     2
+#define SIMPLE_FORMAT      's'
+#define DESCRIPTIVE_FORMAT 'd'
+#define VERBOSE_FORMAT     'v'
 
 #define MAX_BUFFER_SIZE 128
 #define MAX_TOKENS      4
@@ -52,8 +52,11 @@ Yucon - General purpose unit converter
 static char *dash_b = "-b: input file expected as last argument";
 static char *dash_o = "-o: expected output file name";
 static char *conversion_incomplete = "incomplete conversion";
+static char *var_incomplete = "expected program variable";
+static char *state_incomplete = "expected variable state";
 static char *unrecognized_option = "option";
 static char *unrecognized_command = "command";
+static char *unrecognized_var = "program variable";
 
 /* get_type_str
  *
@@ -425,7 +428,7 @@ void help( ProgramOptions *options, char **token )
 		break;
 
 	case UNITS_FILE_MISSING:
-		printf( "units.dat file missing or corrupt\n\n" );
+		printf( "units.cfg file missing or corrupt\n\n" );
 		break;
 
 	case INPUT_FILE_ERR:
@@ -450,6 +453,10 @@ void help( ProgramOptions *options, char **token )
 
 	case RECALL_UNSET:
 		printf( "%s: unable to recall last (not set)\n\n", error_msg );
+		break;
+
+	case INVALID_VAR_STATE:
+		printf( "%s: invalid variable state: %s\n\n", token[1], token[2] );
 		break;
 
 	default:
@@ -483,9 +490,9 @@ void help( ProgramOptions *options, char **token )
 					"                 argument is expected to be input file. if no file is specified,\n"
 					"                 STDIN is used\n"
 					"    -o[q] name - output to file specified. q suboption cancels console output\n"
-					"    -s         - simple output (excludes output unit)\n"
-					"    -d         - descriptive output (includes output unit)\n"
-					"    -v         - verbose output. (include original value, input&output units)\n"
+					"    -s         - simple output. prints only output value\n"
+					"    -d         - descriptive output (DEFAULT). includes output unit\n"
+					"    -v         - verbose output. include input value, input&output units\n"
 					"    -h, --help - prints this help message\n"
 					"    --version  - print version and license info\n\n"
 					"Examples:\n"
@@ -506,9 +513,14 @@ void help( ProgramOptions *options, char **token )
 					"Commands:\n"
 					"    exit               - exit the program\n"
 					"    help               - print this help message\n"
-					"    get <var>          - get the state of the given program variable\n"
 					"    set <var> <state>  - set a program variable to the given state\n"
+					"    view <var>         - view the state of the given program variable\n"
 					"    version            - print version and license info\n\n"
+					"Program Variables:\n"
+					"    format             - output format. may be \'s\', \'d\', or \'v\'\n"
+					"    value              - value to be converted. may be any valid double\n"
+					"    input_unit         - unit to convert from. may be any valid unit name\n"
+					"    output_unit        - unit to convert to. may be any valid unit name\n\n"
 					"This is free software licensed under the GNU General Public License v3.\n"
 					"Type \'version\' for more details.\n"
 					COPYRIGHT_NOTICE
@@ -747,6 +759,157 @@ void args_convert( ProgramOptions *options )
 	delete_recall_data();
 }
 
+/* valid_vars is an pseudo array of variables. it is a group of strings separated by a null
+ * terminator. the entire string is double null terminated. this allows for better parsing
+ * behavior than a simple matching lookup by reducing the code density and calling strcmp()
+ * only once using a clever loop. this also allows this string to be usable by C library
+ * functions since valid tokens are null termianted.
+ */
+static const char *valid_vars = "format\0value\0input_unit\0output_unit\0";
+#define FORMAT      1
+#define VALUE       2
+#define UNIT_IN     3
+#define UNIT_OUT    4
+
+/* is_valid_var
+ *
+ * Purpose: checks if the given string is a valid program variable.
+ *   program variables control things like output format and recall values.
+ *   returns EXIT_SUCCESS if variable is valid.
+ *
+ *   Valid Program Vars:
+ *     format
+ *     value
+ *     input_unit
+ *     output_unit
+ *
+ * Parameters:
+ *   char *str - token of input
+ *
+ * Returns: Nonzero - var is valid. Zero - var is invalid.
+ */
+int is_valid_var( char *str )
+{
+	int program_var = 1;
+
+	//while there are still more tokens to scan
+	//valid_vars is a series of tokens concatenated and separated by a NULL terminator
+	//interate through until the next token is itself a NULL terminator
+	for ( int pos = 0; valid_vars[pos] != NULL_CHAR; )
+	{
+		//check if the given var is a valid variable
+		//token to check against is determined using pointer arithmetic
+		//add the offset from the beginning of valid_vars
+		if ( strcmp(str, valid_vars + pos) == 0 )
+		{
+			return program_var;
+		}
+
+		//increment the offset until we reach the next token
+		while ( valid_vars[pos++] != NULL_CHAR );
+		program_var++;
+	}
+
+	return 0;
+}
+
+
+void set_program_var( ProgramOptions *options, char **token )
+{
+	error_code = EXIT_SUCCESS; //clear any error state
+
+	switch( is_valid_var( token[1] ) )
+	{
+	case FORMAT:
+		if ( (token[2][0] == SIMPLE_FORMAT ||
+		      token[2][0] == VERBOSE_FORMAT ||
+			  token[2][0] == DESCRIPTIVE_FORMAT
+			 ) &&
+			 (token[2][1] == NULL_CHAR)
+		   )
+		{
+			options->format = token[2][0];
+		}
+		else
+		{
+			error_code = INVALID_VAR_STATE;
+		}
+		break;
+
+	case VALUE:
+		if ( is_double( token[2] ) )
+		{
+			last_number = strtod( token[2], NULL );
+		}
+		else
+		{
+			error_code = INVALID_VAR_STATE;
+		}
+		break;
+
+	case UNIT_IN:
+		error_code = set_recall_unit( token[2], INPUT_UNIT );
+		break;
+
+	case UNIT_OUT:
+		error_code = set_recall_unit( token[2], OUTPUT_UNIT );
+		break;
+
+	default:
+		break;
+	}
+
+	if ( error_code )
+	{
+		help( options, token );
+	}
+}
+
+void get_program_var( ProgramOptions *options, char **token )
+{
+	error_code = EXIT_SUCCESS; //clear any error state
+	char *recall_unit = NULL;
+
+
+	switch ( is_valid_var( token[1] ) )
+	{
+	case FORMAT:
+		printf( "%c\n", options->format );
+		break;
+
+	case VALUE:
+		printf( "%g\n", last_number );
+		break;
+
+	case UNIT_IN:
+		recall_unit = get_recall_unit( token[1], INPUT_UNIT );
+
+		if ( !recall_unit )
+		{
+			recall_unit = "[not set]\n";
+		}
+
+		printf( "%s\n", recall_unit );
+		break;
+
+	case UNIT_OUT:
+		recall_unit = get_recall_unit( token[1], OUTPUT_UNIT );
+
+		if ( !recall_unit )
+		{
+			recall_unit = "[not set]";
+		}
+
+		printf( "%s\n", recall_unit );
+		break;
+
+	default:
+		break;
+
+	}
+}
+
+
 #define RETURN_STATE    -1
 #define GET_CMD         0
 #define GET_INPUT_UNIT  2
@@ -820,6 +983,11 @@ int run_command( char *str, ProgramOptions *options )
 				error_code = SET_PROGRAM_VAR;
 				state = GET_VAR;
 			}
+			else if ( strcmp( token[0], "view" ) == 0 )
+			{
+				error_code = GET_PROGRAM_VAR;
+				state = GET_VAR;
+			}
 			else if ( is_double( token[0] ) )
 			{
 				state = GET_INPUT_UNIT;
@@ -861,9 +1029,43 @@ int run_command( char *str, ProgramOptions *options )
 			break;
 
 		case GET_VAR:
+			if ( token[pos-1] && is_valid_var( token[pos-1] ) )
+			{
+				if ( error_code == SET_PROGRAM_VAR )
+				{
+					state = GET_VAR_STATE;
+				}
+				else
+				{
+					state = RETURN_STATE;
+				}
+			}
+			else if ( token[pos-1] )
+			{
+				error_code = UNRECOGNIZED_ARG;
+				error_msg = unrecognized_var;
+				options->last_arg = token[pos-1];
+				state = RETURN_STATE;
+			}
+			else
+			{
+				error_code = NOT_ENOUGH_ARGS;
+				error_msg = var_incomplete;
+				state = RETURN_STATE;
+			}
 			break;
 
 		case GET_VAR_STATE:
+			if ( token[pos-1] )
+			{
+				state = RETURN_STATE;
+			}
+			else
+			{
+				error_code = NOT_ENOUGH_ARGS;
+				error_msg = state_incomplete;
+				state = RETURN_STATE;
+			}
 			break;
 
 		}
@@ -879,6 +1081,14 @@ int run_command( char *str, ProgramOptions *options )
 
 	case EXIT_PROGRAM:
 		return error_code;
+
+	case SET_PROGRAM_VAR:
+		set_program_var( options, token );
+		break;
+
+	case GET_PROGRAM_VAR:
+		get_program_var( options, token );
+		break;
 
 	default:
 		help( options, token );

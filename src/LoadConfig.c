@@ -228,12 +228,12 @@ int load_units_list()
 #if defined(__unix__) || defined(__linux__) || defined(__gnu_linux__)
 	units_cfg = fopen( "/etc/yucon/units.dat", "r" );
 
-#pragma message("Using UNIX file path for units.dat file. Yucon expects it at /etc/yucon/units.dat")
+#pragma message("Using UNIX file path for units.cfg file. Yucon expects it at /etc/yucon/units.cfg")
 //if other system, default to loading from the current file path
 #else
-	units_cfg = fopen( "units.dat", "r" );
+	units_cfg = fopen( "units.cfg", "r" );
 
-#pragma message("Using application launch path for units.dat file. Yucon expects it in same folder as executable.")
+#pragma message("Using application launch path for units.cfg file. Yucon expects it in same folder as executable.")
 #endif
 
 	//exit early if config file does not exist

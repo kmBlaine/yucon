@@ -32,7 +32,11 @@ Yucon - General purpose unit converter
 
 #define OUTPUT_STR_SIZE 128
 
+extern double last_number;
+
 int get_conversion( char*, char*, char*, double* );
+int set_recall_unit( char*, int );
+char *get_recall_unit( char*, int );
 
 char *simple_output_str( double );
 char *descriptive_output_str( double, char* );

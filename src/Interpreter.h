@@ -51,9 +51,9 @@ Yucon - General purpose unit converter
  *     ptr  - write to file with specified name
  *
  *   char format - specifies the format of outputs
- *     0 - simple. writes number only eg. 1.1, 5, 25.4
- *     1 - descriptive. writes number and associated unit eg. 1.1 qt, 5 cm2, 25.4 mm
- *     2 - verbose. writes input and output values with units eg. 1 in = 25.4 mm, 1 in3 = 16.38 cc
+ *     s - simple. writes number only eg. 1.1, 5, 25.4
+ *     d - descriptive. writes number and associated unit eg. 1.1 qt, 5 cm2, 25.4 mm
+ *     v - verbose. writes input and output values with units eg. 1 in = 25.4 mm, 1 in3 = 16.38 cc
  *
  *   char *last_arg - argument where options parsing left off
  *

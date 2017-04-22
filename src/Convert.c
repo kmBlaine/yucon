@@ -44,12 +44,13 @@ Yucon - General purpose unit converter
 #define PREFIX_SET     3
 #define GET_LAST_UNIT  4
 
-static double last_number;
-static char *last_input_name;
-static char *last_output_name;
+double last_number;
+static char *last_input_name = NULL;
+static char *last_output_name = NULL;
 
-static char *get_input_unit = "input unit";
-static char *get_output_unit = "output unit";
+static char *get_input_unit_msg = "input unit";
+static char *get_output_unit_msg = "output unit";
+
 
 /* get_prefix_value
  *
@@ -283,7 +284,7 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 
 		if ( input_unit == NULL )
 		{
-			error_msg = get_input_unit; //preemptively set error point for external help function
+			error_msg = get_input_unit_msg; //preemptively set error point for external help function
 			return RECALL_UNSET;
 		}
 	}
@@ -315,7 +316,7 @@ int get_conversion( char *number, char *input_unit_name, char *output_unit_name,
 
 		if ( output_unit == NULL )
 		{
-			error_msg = get_output_unit;
+			error_msg = get_output_unit_msg;
 			return RECALL_UNSET;
 		}
 	}
@@ -528,6 +529,39 @@ char *verbose_output_str( double conversion, char *orig_val, char *input_unit_na
 	}
 
 	return str;
+}
+
+
+int set_recall_unit( char *name, int which )
+{
+	if ( get_unit_by_name( name, which) )
+	{
+		if ( which == INPUT_UNIT )
+		{
+			copy_name_for_recall( name, &last_input_name );
+		}
+		else
+		{
+			copy_name_for_recall( name, &last_output_name );
+		}
+	}
+	else
+	{
+		error_msg = name;
+		return UNIT_NF;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+char *get_recall_unit( char *name, int which )
+{
+	if ( which == INPUT_UNIT )
+	{
+		return last_input_name;
+	}
+
+	return last_output_name;
 }
 
 /* delete_recall_data
