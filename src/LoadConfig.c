@@ -29,23 +29,26 @@ Yucon - General purpose unit converter
 
 #include "LoadConfig.h"
 #include "UnitList.h"
+#include "parse.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-const char *length = "length";
-const char *volume = "volume";
-const char *area = "area";
-const char *energy = "energy";
-const char *power = "power";
-const char *mass = "mass";
-const char *force = "force";
-const char *torque = "torque";
-const char *speed = "speed";
-const char *pressure = "pressure";
-const char *temp = "temperature";
-const char *feconomy = "fuel economy";
+const char *unit_type_strs[] = {
+	"length",
+	"volume",
+	"area",
+	"energy",
+	"power",
+	"mass",
+	"force",
+	"torque",
+	"speed",
+	"pressure",
+	"temperature",
+	"fuel economy"
+};
 
 /* names_count
  *
@@ -134,79 +137,6 @@ char **get_names_list( char *str )
 	return names_list;
 }
 
-/* get_unit_type
- *
- * Purpose: converts the common unit type (ie force, mass, length) to the
- *   program's internal numeric representation
- *
- * Parameters:
- *   char *str - common unit type name (ie force, mass, length)
- *
- * Returns: int - internal numeric representation if match is found. -1 if not
- */
-int get_unit_type( char *str )
-{
-	if ( strncmp( str, length, 6) == 0 )
-	{
-		return LENGTH;
-	}
-
-	if ( strncmp( str, volume, 6) == 0 )
-	{
-		return VOLUME;
-	}
-
-	if ( strncmp( str, area, 4) == 0 )
-	{
-		return AREA;
-	}
-
-	if ( strncmp( str, energy, 6) == 0 )
-	{
-		return ENERGY;
-	}
-
-	if ( strncmp( str, power, 5) == 0 )
-	{
-		return POWER;
-	}
-
-	if ( strncmp( str, mass, 4) == 0 )
-	{
-		return MASS;
-	}
-
-	if ( strncmp( str, force, 5) == 0 )
-	{
-		return FORCE;
-	}
-
-	if ( strncmp( str, torque, 6) == 0 )
-	{
-		return TORQUE;
-	}
-
-	if ( strncmp( str, speed, 5 ) == 0 )
-	{
-		return SPEED;
-	}
-
-	if ( strncmp( str, pressure, 8 ) == 0 )
-	{
-		return PRESSURE;
-	}
-
-	if ( strncmp( str, temp, 11) == 0 )
-	{
-		return TEMP;
-	}
-	if ( strncmp( str, feconomy, 12 ) == 0 )
-	{
-		return FECONOMY;
-	}
-
-	return -1; //return -1 on failure
-}
 
 /* load_units_list
  *
@@ -302,7 +232,8 @@ int load_units_list()
 		//memory leak and go to top of loop
 		if ( strncmp( line_buffer, "type=", 5 ) == 0 )
 		{
-			unit_type = get_unit_type( line_buffer + 5 );
+			replace_char( line_buffer, '\n', NULL_CHAR );
+			search( line_buffer+5, unit_type_strs, 0, TOTAL_TYPES, &unit_type );
 		}
 		else
 		{

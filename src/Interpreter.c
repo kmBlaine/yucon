@@ -34,6 +34,7 @@ Yucon - General purpose unit converter
 #include "Interpreter.h"
 #include "UnitList.h"
 #include "Convert.h"
+#include "parse.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -58,60 +59,6 @@ static char *unrecognized_option = "option";
 static char *unrecognized_command = "command";
 static char *unrecognized_var = "program variable";
 
-/* get_type_str
- *
- * Purpose: given the internal type code for a unit, returns a string
- *   with the English name of the unit type
- *
- * Parameters:
- *   int unit_type - internal type code for a unit
- *
- * Returns: char* - pointer to read-only string containing english name
- */
-const char *get_type_str( int unit_type )
-{
-	switch ( unit_type )
-	{
-	case LENGTH:
-		return length;
-
-	case VOLUME:
-		return volume;
-
-	case AREA:
-		return area;
-
-	case ENERGY:
-		return energy;
-
-	case POWER:
-		return power;
-
-	case MASS:
-		return mass;
-
-	case FORCE:
-		return force;
-
-	case TORQUE:
-		return torque;
-
-	case SPEED:
-		return speed;
-
-	case PRESSURE:
-		return pressure;
-
-	case TEMP:
-		return temp;
-
-	case FECONOMY:
-		return feconomy;
-
-	default:
-		return length;
-	}
-}
 
 /* print_version
  *
@@ -142,20 +89,6 @@ void print_version()
 			"You should have received a copy of the GNU General Public License\n"
 			"along with this program.  If not, see <http://www.gnu.org/licenses/>.\n"
 	);
-}
-
-int is_double( char *str )
-{
-	char *input_end = NULL;
-	strtod( str, &input_end );
-
-	//if the conversion was unsuccessful, input_end will be not be '\0' and 'recall last' will not be present
-	if ( (strcmp(str, ":") != 0) && input_end && (input_end[0] != NULL_CHAR) )
-	{
-		return 0;
-	}
-
-	return 1;
 }
 
 /* check_nondash_arg
@@ -213,6 +146,30 @@ int check_nondash_arg( ProgramOptions *options, int arg )
 	}
 }
 
+//each correlates to index in opt_strs array
+#define B_OPT        0
+#define D_OPT        1
+#define H_OPT        2
+#define HELP_OPT     3
+#define O_OPT        4
+#define OQ_OPT       5
+#define S_OPT        6
+#define V_OPT        7
+#define VERSION_OPT  8
+#define TOTAL_OPTS   9
+
+static const char *opt_strs[] = {
+	"b",           //batch mode
+	"d",           //descriptive output format
+	"h",           //help
+	"help",        //help
+	"o",           //write output to file
+	"oq",          //write output to file (cancels console output)
+	"s",           //simple output format (number only)
+	"v",           //verbose output format (number, input&output units)
+	"version"      //version and license info
+};
+
 /* set_program_options
  *
  * Purpose: parses the program options from the command line args and puts
@@ -223,15 +180,6 @@ int check_nondash_arg( ProgramOptions *options, int arg )
  *   ProgramOptions *options - options struct to write into
  *   int argc - arguments count
  *   char *argv[] - array of command line arguments
- *
- * Valid Options:
- *   -b   - batch mode
- *   -o   - output to file and stdout (default behavior)
- *     q  - suboption. output to file only (quiet behavior)
- *     whatever arg follows is the name of the output file
- *   -d   - descriptive outputs ( 1.5mm instead of 1.5 )
- *   -v   - verbose outputs ( 1 in = 25.4 mm )
- *   -h,--help
  *
  * Returns: Int:
  *   0 - success. no errors
@@ -251,11 +199,22 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 	//if any option is -h or --help, return HELP error code
 	for ( int arg = 1; arg < argc; arg++ )
 	{
-		if ( (strcmp( argv[arg], "-h" ) == 0) || (strcmp( argv[arg], "--help") == 0) )
+		int opt = -1;
+		int offset = 1;
+
+		if ( argv[arg][1] == '-')
+		{
+			offset++;
+		}
+
+		search( argv[arg]+offset, opt_strs, 0, TOTAL_OPTS, &opt );
+
+		if ( (opt == H_OPT) || (opt == HELP_OPT) )
 		{
 			return HELP_REQUESTED;
 		}
-		if ( strcmp( argv[arg], "--version" ) == 0 )
+
+		if ( opt == VERSION_OPT )
 		{
 			return VERSION_REQUESTED;
 		}
@@ -269,26 +228,43 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 		//filter out dash args
 		if ( argv[arg][0] == '-' )
 		{
-			//if batch mode, set batch option
-			if ( strcmp( argv[arg], "-b" ) == 0 )
+			int opt = -1;
+			int offset = 1; //used to get rid of the dash when passing option to search()
+
+			//if double dash arg, inc offset
+			if ( argv[arg][1] == '-' )
 			{
-				options->input_mode = BATCH_MODE;
+				offset++;
 			}
-			//if verbose output file mode
-			else if ( strcmp( argv[arg], "-o") == 0 )
+
+			search( argv[arg]+offset, opt_strs, 0, TOTAL_OPTS, &opt );
+
+			switch ( opt )
 			{
+			case B_OPT: //if batch mode, set batch option
+				options->input_mode = BATCH_MODE;
+				break;
+
+			case D_OPT:
+				//if descriptive format, set descriptive format option
+				//TECHNICALLY THIS OPTION DOES NOTHING SINCE AS OF v0.1.1 DEFAULT FORMAT IS DESCRIPTIVE
+				//@kmBlaine REMOVE IN v0.2?
+				options->format = DESCRIPTIVE_FORMAT;
+				break;
+
+			case O_OPT: //if chatty file output  mode
 				options->output_mode = VERBOSE_MODE;
 				//if there are enough args, set next arg to filename
-				if ( arg < (argc - 1) ){ options->output_file = argv[++arg]; }
+				if ( arg < (argc - 1) )
+					options->output_file = argv[++arg];
 				else
 				{
 					error_msg = dash_o;
 					return NOT_ENOUGH_ARGS;
 				} //else return error
-			}
-			//if quiet output file mode
-			else if ( strcmp( argv[arg], "-oq" ) == 0 )
-			{
+				break;
+
+			case OQ_OPT: //if quiet file output mode
 				options->output_mode = QUIET_MODE;
 				//if there are enough args, set next arg to filename
 				if ( arg < (argc - 1) ){ options->input_file = argv[++arg]; }
@@ -297,44 +273,39 @@ int set_program_options( ProgramOptions *options, int argc, char *argv[] )
 					error_msg = dash_o;
 					return NOT_ENOUGH_ARGS;
 				}
-			}
-			//if simple format, set simple format option
-			else if ( strcmp( argv[arg], "-s" ) == 0 )
-			{
+				break;
+
+			case S_OPT: //simple output format
 				options->format = SIMPLE_FORMAT;
-			}
-			//if descriptive format, set descriptive format option
-			//TECHNICALLY THIS OPTION DOES NOTHING SINCE AS OF v0.1.1 DEFAULT FORMAT IS DESCRIPTIVE
-			//@kmBlaine REMOVE IN v0.2
-			else if ( strcmp( argv[arg], "-d" ) == 0 )
-			{
-				options->format = DESCRIPTIVE_FORMAT;
-			}
-			//if verbose format, set verbose format option
-			else if ( strcmp( argv[arg], "-v" ) == 0 )
-			{
+				break;
+
+			case V_OPT:
 				options->format = VERBOSE_FORMAT;
+				break;
+
+			default:
+				if ( atof(argv[arg]) )
+				{
+					error_code = check_nondash_arg( options, arg );
+
+					if ( error_code == TRY_ARGS_CONVERT )
+					{
+						options->input_mode = ONE_TIME_MODE;
+						break;
+					}
+					else if ( error_code )
+					{
+						return error_code;
+					}
+				}
+				else
+				{
+					error_msg = unrecognized_option;
+					return UNRECOGNIZED_ARG; //else unrecognized arg. error
+				}
 			}
 			//arg may simply be a negative value. check it as a non-special arg
-			else if ( atof(argv[arg]) )
-			{
-				error_code = check_nondash_arg( options, arg );
 
-				if ( error_code == TRY_ARGS_CONVERT )
-				{
-					options->input_mode = ONE_TIME_MODE;
-					break;
-				}
-				else if ( error_code )
-				{
-					return error_code;
-				}
-			}
-			else
-			{
-				error_msg = unrecognized_option;
-				return UNRECOGNIZED_ARG; //else unrecognized arg. error
-			}
 		}
 		else //else if non dash argument
 		{
@@ -410,15 +381,15 @@ void help( ProgramOptions *options, char **token )
 		if ( options->input_mode == ONE_TIME_MODE )
 		{
 			printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
-					get_type_str( get_unit_by_name( options->argv[options->argc-2], INPUT_UNIT )->unit_type ),
-					get_type_str( get_unit_by_name( options->argv[options->argc-1], OUTPUT_UNIT )->unit_type )
+					unit_type_strs[ get_unit_by_name( options->argv[options->argc-2], INPUT_UNIT )->unit_type ],
+					unit_type_strs[ get_unit_by_name( options->argv[options->argc-1], OUTPUT_UNIT )->unit_type ]
 			);
 		}
 		else
 		{
 			printf( "incompatible unit types. Attempted to convert %s to %s\n\n",
-					get_type_str( get_unit_by_name( token[1], INPUT_UNIT )->unit_type ),
-					get_type_str( get_unit_by_name( token[2], OUTPUT_UNIT )->unit_type )
+					unit_type_strs[ get_unit_by_name( token[1], INPUT_UNIT )->unit_type ],
+					unit_type_strs[ get_unit_by_name( token[2], OUTPUT_UNIT )->unit_type ]
 			);
 		}
 		break;
@@ -759,66 +730,26 @@ void args_convert( ProgramOptions *options )
 	delete_recall_data();
 }
 
-/* valid_vars is an pseudo array of variables. it is a group of strings separated by a null
- * terminator. the entire string is double null terminated. this allows for better parsing
- * behavior than a simple matching lookup by reducing the code density and calling strcmp()
- * only once using a clever loop. this also allows this string to be usable by C library
- * functions since valid tokens are null termianted.
- */
-static const char *valid_vars = "format\0value\0input_unit\0output_unit\0";
-#define FORMAT      1
-#define VALUE       2
-#define UNIT_IN     3
-#define UNIT_OUT    4
-
-/* is_valid_var
- *
- * Purpose: checks if the given string is a valid program variable.
- *   program variables control things like output format and recall values.
- *   returns EXIT_SUCCESS if variable is valid.
- *
- *   Valid Program Vars:
- *     format
- *     value
- *     input_unit
- *     output_unit
- *
- * Parameters:
- *   char *str - token of input
- *
- * Returns: Nonzero - var is valid. Zero - var is invalid.
- */
-int is_valid_var( char *str )
-{
-	int program_var = 1;
-
-	//while there are still more tokens to scan
-	//valid_vars is a series of tokens concatenated and separated by a NULL terminator
-	//interate through until the next token is itself a NULL terminator
-	for ( int pos = 0; valid_vars[pos] != NULL_CHAR; )
-	{
-		//check if the given var is a valid variable
-		//token to check against is determined using pointer arithmetic
-		//add the offset from the beginning of valid_vars
-		if ( strcmp(str, valid_vars + pos) == 0 )
-		{
-			return program_var;
-		}
-
-		//increment the offset until we reach the next token
-		while ( valid_vars[pos++] != NULL_CHAR );
-		program_var++;
-	}
-
-	return 0;
-}
-
+#define FORMAT      0
+#define UNIT_IN     1
+#define UNIT_OUT    2
+#define VALUE       3
+#define TOTAL_VARS  4
+static const char *prog_var_strs[] = {
+	"format",
+	"input_unit",
+	"output_unit",
+	"value"
+};
 
 void set_program_var( ProgramOptions *options, char **token )
 {
 	error_code = EXIT_SUCCESS; //clear any error state
 
-	switch( is_valid_var( token[1] ) )
+	int prog_var = -1;
+	search( token[1], prog_var_strs, 0, TOTAL_VARS, &prog_var );
+
+	switch( prog_var )
 	{
 	case FORMAT:
 		if ( (token[2][0] == SIMPLE_FORMAT ||
@@ -870,8 +801,10 @@ void get_program_var( ProgramOptions *options, char **token )
 	error_code = EXIT_SUCCESS; //clear any error state
 	char *recall_unit = NULL;
 
+	int prog_var = -1;
+	search( token[1], prog_var_strs, 0, TOTAL_VARS, &prog_var );
 
-	switch ( is_valid_var( token[1] ) )
+	switch ( prog_var )
 	{
 	case FORMAT:
 		printf( "%c\n", options->format );
@@ -910,6 +843,20 @@ void get_program_var( ProgramOptions *options, char **token )
 }
 
 
+#define EXIT_CMD    0
+#define HELP_CMD    1
+#define SET_CMD     2
+#define VERSION_CMD 3
+#define VIEW_CMD    4
+#define TOTAL_CMDS  5
+static const char *cmd_strs[] = {
+	"exit",
+	"help",
+	"set",
+	"version",
+	"view"
+};
+
 #define RETURN_STATE    -1
 #define GET_CMD         0
 #define GET_INPUT_UNIT  2
@@ -938,14 +885,7 @@ int run_command( char *str, ProgramOptions *options )
 	}
 
 	//replace newline character before proceeding
-	for ( int pos = 0; str[pos] != NULL_CHAR; pos++ )
-	{
-		if ( str[pos] == '\n' )
-		{
-			str[pos] = NULL_CHAR;
-			break;
-		}
-	}
+	replace_char( str, '\n', NULL_CHAR );
 
 	//initialize the pointer array to be all null values
 	char *token[MAX_TOKENS];
@@ -960,30 +900,34 @@ int run_command( char *str, ProgramOptions *options )
 	//state machine for parsing the input line
 	for ( int pos = 1; pos < MAX_TOKENS && state != RETURN_STATE; pos++ )
 	{
+		int cmd = -1;
+
 		switch ( state )
 		{
 		case GET_CMD:
-			if ( strcmp( token[0], "exit" ) == 0 )
+			search( token[0], cmd_strs, 0, TOTAL_CMDS, &cmd );
+
+			if ( cmd == EXIT_CMD )
 			{
 				error_code = EXIT_PROGRAM;
 				state = RETURN_STATE;
 			}
-			else if ( strcmp( token[0], "help" ) == 0 )
+			else if ( cmd == HELP_CMD )
 			{
 				error_code = HELP_REQUESTED;
 				state = RETURN_STATE;
 			}
-			else if ( strcmp( token[0], "version" ) == 0 )
+			else if ( cmd == VERSION_CMD )
 			{
 				error_code = VERSION_REQUESTED;
 				state = RETURN_STATE;
 			}
-			else if ( strcmp( token[0], "set" ) == 0 )
+			else if ( cmd == SET_CMD )
 			{
 				error_code = SET_PROGRAM_VAR;
 				state = GET_VAR;
 			}
-			else if ( strcmp( token[0], "view" ) == 0 )
+			else if ( cmd == VIEW_CMD )
 			{
 				error_code = GET_PROGRAM_VAR;
 				state = GET_VAR;
@@ -1029,7 +973,7 @@ int run_command( char *str, ProgramOptions *options )
 			break;
 
 		case GET_VAR:
-			if ( token[pos-1] && is_valid_var( token[pos-1] ) )
+			if ( token[pos-1] && search( token[pos-1], prog_var_strs, 0, TOTAL_VARS, NULL ) )
 			{
 				if ( error_code == SET_PROGRAM_VAR )
 				{

@@ -109,6 +109,8 @@ Yucon - General purpose unit converter
 #define PRESSURE 9
 #define TEMP     10
 #define FECONOMY 11
+#define TOTAL_TYPES 12
+extern const char *unit_type_strs[];
 
 extern int error_code;
 extern char *error_msg;
@@ -118,18 +120,7 @@ extern char *error_msg;
 //and used in other modules. Temporarily disable unused variable warnings
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
-extern const char *length;
-extern const char *volume;
-extern const char *area;
-extern const char *energy;
-extern const char *power;
-extern const char *mass;
-extern const char *force;
-extern const char *torque;
-extern const char *speed;
-extern const char *pressure;
-extern const char *temp;
-extern const char *feconomy;
+extern const char *unit_strs[];
 //enable unused variable warnings
 #pragma GCC diagnostic pop
 
