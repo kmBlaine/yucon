@@ -3,17 +3,19 @@
 pub static UNIT_TYPES: [&'static str; 3] = ["length", "volume", "area"];
 pub static DEFAULT_NAME: &'static str = "DEFAULT";
 
-pub struct Unit<'a >
+pub struct Unit
 {
     pub common_name: String,
-    pub unit_type: &'a str,
+    pub unit_type: &'static str, //life time is static because the type strings are embedded
     pub conv_factor: f64,
-    pub zero_point: f64
+    pub zero_point: f64,
+    pub dimensions: u8,
+    pub inverse: bool
 }
 
 pub struct UnitScalar<'a>
 {
-    pub unit: &'a Unit<'a>,
+    pub unit: &'a Unit,
     pub scalar: f64,
     pub prefix: f64
 }
