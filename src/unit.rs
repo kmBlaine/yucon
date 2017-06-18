@@ -283,10 +283,10 @@ impl UnitDatabase
 		Some(unit) //if adding was unsucssesful, we need to hand back the values
 	}
 
-	pub fn query(&self, name: String) -> Option<Rc<Unit>>
+	pub fn query(&self, name: &String) -> Option<Rc<Unit>>
 	{
-		if let Some(unit_rc) = self.aliases.get(&Rc::new(name))
-		{
+		if let Some(unit_rc) = self.aliases.get(&Rc::new(name.clone()))
+		{ 
 			return Some(unit_rc.clone());
 		}
 
