@@ -12,6 +12,8 @@ use ::parse;
 use ::parse::*;
 use ::types;
 use ::types::*;
+use ::database;
+use ::database::*;
 use std::rc;
 use std::rc::Rc;
 use std::num::ParseFloatError;
@@ -69,49 +71,49 @@ enum ParsePropertyError
 
 impl Error for ParsePropertyError
 {
-    fn description(&self) -> &str
-    {
-        match *self
-        {
-        	ParsePropertyError::SyntaxError(ref err)    => err.description(),
-            ParsePropertyError::NoSuchProperty(ref msg) => "no such unit property exists",
-            ParsePropertyError::NoSuchType(ref msg)     => "no such unit type is recognized by Yucon",
-            ParsePropertyError::EmptyField(ref msg)     => "expected value(s) after delimiters \'=\' and \'[\'",
-            ParsePropertyError::InvalidField(ref err)   => err.description(),
-        }
-    }
-
-    fn cause(&self) -> Option<&Error>
-    {
-        match *self
-        {
-            ParsePropertyError::InvalidField(ref err) => Some( err ),
-            _ => None,
-        }
-    }
+	fn description(&self) -> &str
+	{
+		match *self
+		{
+		ParsePropertyError::SyntaxError(ref err)    => err.description(),
+		ParsePropertyError::NoSuchProperty(ref msg) => "no such unit property exists",
+		ParsePropertyError::NoSuchType(ref msg)     => "no such unit type is recognized by Yucon",
+		ParsePropertyError::EmptyField(ref msg)     => "expected value(s) after delimiters \'=\' and \'[\'",
+		ParsePropertyError::InvalidField(ref err)   => err.description(),
+		}
+	}
+	
+	fn cause(&self) -> Option<&Error>
+	{
+		match *self
+		{
+		ParsePropertyError::InvalidField(ref err) => Some( err ),
+		_ => None,
+		}
+	}
 }
 
 impl Display for ParsePropertyError
 {
-    fn fmt( &self, f: &mut Formatter ) -> fmt::Result
-    {
-        match *self
-        {
-        	ParsePropertyError::SyntaxError(ref err) => write!(f, "{}", err),
-            ParsePropertyError::InvalidField(ref err )     => write!(f, "bad field value: {}", err.description() ),
-            ParsePropertyError::EmptyField(ref prop )      => write!(f, "for property \'{}\': {}", prop, self.description() ),
-            ParsePropertyError::NoSuchType(ref unit_type ) => write!(f, "at token \'{}\': {}", unit_type, self.description() ),
-            ParsePropertyError::NoSuchProperty(ref prop )  => write!(f, "at token \'{}\': {}", prop, self.description() ),
-        }
-    }
+	fn fmt( &self, f: &mut Formatter ) -> fmt::Result
+	{
+		match *self
+		{
+		ParsePropertyError::SyntaxError(ref err)       => write!(f, "{}", err),
+		ParsePropertyError::InvalidField(ref err )     => write!(f, "bad field value: {}", err.description() ),
+		ParsePropertyError::EmptyField(ref prop )      => write!(f, "for property \'{}\': {}", prop, self.description() ),
+		ParsePropertyError::NoSuchType(ref unit_type ) => write!(f, "at token \'{}\': {}", unit_type, self.description() ),
+		ParsePropertyError::NoSuchProperty(ref prop )  => write!(f, "at token \'{}\': {}", prop, self.description() ),
+		}
+	}
 }
 
 impl From<ParseFloatError> for ParsePropertyError
 {
-    fn from(err: ParseFloatError) -> ParsePropertyError
-    {
-        ParsePropertyError::InvalidField( err )
-    }
+	fn from(err: ParseFloatError) -> ParsePropertyError
+	{
+		ParsePropertyError::InvalidField( err )
+	}
 }
 
 impl From<SyntaxError> for ParsePropertyError
@@ -724,19 +726,15 @@ fn parse_line(line: &str) -> Result<Option<UnitProperty>, ParsePropertyError>
 	Ok(Some(unit_property))
 }
 
-fn add_unit(new_unit: Unit, aliases: &Vec<Rc<String>>)
+fn add_unit(database: &mut UnitDatabase, new_unit: Unit, aliases: &Vec<Rc<String>>)
 {
 	if new_unit.is_well_formed()
 	{
-		println!("\nSuccessfully added unit with the following properties:\n{:?}",
-		          new_unit);
-
-		if new_unit.has_aliases
+		if let Some(unit) = database.add(new_unit, aliases)
 		{
-			for alias in aliases
-			{
-				println!("Also referred to as: {}", alias);
-			}
+			println!("\n*** ERROR ***\n\
+			          Failed to add unit {}: an existing unit shares names with this one\n",
+			          unit.common_name);
 		}
 	}
 	else
@@ -747,13 +745,13 @@ fn add_unit(new_unit: Unit, aliases: &Vec<Rc<String>>)
 	}
 }
 
-pub fn load_units_list()
+pub fn load_units_list() -> Option<UnitDatabase>
 {
 	let file = match File::open("/etc/yucon/units2.cfg")
 	{
 		Err(err) => {
 			println!("Unable to open units.cfg: {}", err.description());
-			return;
+			return None;
 		},
 		Ok(file)  => file,
 	};
@@ -763,6 +761,7 @@ pub fn load_units_list()
 	let mut line_num = -1;
 	let mut first_unit = true;
 	
+	let mut units_database = UnitDatabase::new();
 	let mut new_unit = Unit::new();
 	let mut aliases: Vec<Rc<String>> = Vec::new();
 
@@ -770,7 +769,7 @@ pub fn load_units_list()
 	while units_cfg.read_line(&mut line).unwrap() > 0
 	{
 		line_num += 1;
-		
+
 		match parse_line(&line)
 		{
 		Ok(wrapper) => {
@@ -786,7 +785,7 @@ pub fn load_units_list()
 					}
 					else
 					{
-						add_unit(new_unit, &aliases);
+						add_unit(&mut units_database, new_unit, &aliases);
 						new_unit = Unit::new();
 						new_unit.set_common_name(name);
 					}
@@ -821,4 +820,10 @@ pub fn load_units_list()
 	
 		line.clear();
 	}
+
+	// units added when a new section begins
+	// last unit in file will not be added without this
+	add_unit(&mut units_database, new_unit, &aliases);
+	
+	Some(units_database)
 }
