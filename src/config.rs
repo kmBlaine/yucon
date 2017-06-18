@@ -10,10 +10,8 @@ use std::io::BufReader;
 use std::io::prelude::*;
 use ::parse;
 use ::parse::*;
-use ::types;
-use ::types::*;
-use ::database;
-use ::database::*;
+use ::unit;
+use ::unit::*;
 use std::rc;
 use std::rc::Rc;
 use std::num::ParseFloatError;
@@ -76,9 +74,9 @@ impl Error for ParsePropertyError
 		match *self
 		{
 		ParsePropertyError::SyntaxError(ref err)    => err.description(),
-		ParsePropertyError::NoSuchProperty(ref msg) => "no such unit property exists",
-		ParsePropertyError::NoSuchType(ref msg)     => "no such unit type is recognized by Yucon",
-		ParsePropertyError::EmptyField(ref msg)     => "expected value(s) after delimiters \'=\' and \'[\'",
+		ParsePropertyError::NoSuchProperty(_) => "no such unit property exists",
+		ParsePropertyError::NoSuchType(_)     => "no such unit type is recognized by Yucon",
+		ParsePropertyError::EmptyField(_)     => "expected value(s) after delimiters \'=\' and \'[\'",
 		ParsePropertyError::InvalidField(ref err)   => err.description(),
 		}
 	}
@@ -474,7 +472,7 @@ fn get_unit_type(requested_type: String) -> Result<&'static str, ParsePropertyEr
 	{ // scope to avoid borrow problem when handing string to NoSuchType error
 	let user_type = requested_type.as_str();
 	
-	for unit_type in types::UNIT_TYPES.iter()
+	for unit_type in unit::UNIT_TYPES.iter()
 	{
 		if *unit_type == user_type
 		{
@@ -562,8 +560,10 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 		}
 		else
 		{
-			println!("INFO: requested {} dimensions for a unit. \
-			          Yucon allows at most 255. Defaulting to 1.",
+			// @TODO Change this a formal error as the default is already 1.
+			println!("\n*** WARNING ***\n\
+			          Requested {} dimensions for a unit. \
+			          Yucon allows at most 255. Using default (1).",
 			          reqested_dims);
 			1
 		};
@@ -588,7 +588,7 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 		
 		let unit_type = match tokens_iter.next()
 		{
-			None      => types::UNIT_TYPES[0], // technically an error but this will be caught later by the empty field check
+			None      => unit::UNIT_TYPES[0], // technically an error but this will be caught later by the empty field check
 			Some(val) => {
 				field_empty = false;
 				try!(get_unit_type(val.unwrap()))
@@ -711,7 +711,7 @@ fn parse_line(line: &str) -> Result<Option<UnitProperty>, ParsePropertyError>
 			panic!("illegal delimiter begins line after syntax verification");
 		}
 	},
-	TokenType::Normal(ref tok) => common_name = false,
+	TokenType::Normal(_) => common_name = false,
 	};
 	
 	let unit_property = if common_name
@@ -775,6 +775,7 @@ pub fn load_units_list() -> Option<UnitDatabase>
 		Ok(wrapper) => {
 			if let Some(prop) = wrapper
 			{
+				// TODO: excessive code. change this block to an inline function for clarity
 				match prop
 				{
 				UnitProperty::CommonName(name) => {

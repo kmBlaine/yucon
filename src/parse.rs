@@ -17,8 +17,8 @@ impl Error for SyntaxError
 	{
 		match *self
 		{
-		SyntaxError::Expected(ref index, ref msg) => "expected different token",
-		SyntaxError::BadEscSeq(ref index, ref ch) => "reached bad escape sequence",
+		SyntaxError::Expected(..) => "expected different token",
+		SyntaxError::BadEscSeq(..) => "reached bad escape sequence",
 		}
 	}
 	
@@ -226,18 +226,18 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 			let mut new_token = buffer.clone();
 			new_token.shrink_to_fit();
 			checker.feed_token(&new_token, !DELIM, index);
-			
+
 			tokens.push(TokenType::Normal(new_token));
-			
+
 			buffer.clear();
 			buffer.push(ch);
-			
+
 			new_token = buffer.clone();
 			new_token.shrink_to_fit();
 			checker.feed_token(&new_token, DELIM, index);
 
 			tokens.push(TokenType::Delim(new_token));
-			
+
 			buffer.clear();
 			delim_pushed = true;
 		}
@@ -245,11 +245,11 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 		{
 			let mut new_token = buffer.clone();
 			new_token.shrink_to_fit();
-			
+
 			checker.feed_token(&new_token, !DELIM, index);
-			
+
 			tokens.push(TokenType::Normal(new_token));
-			delim_pushed = false;
+			try!(checker.assert_valid(index, true));
 			return Ok(tokens); // if we reach a comment, immediately exit
 		}
 		else
@@ -265,10 +265,10 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 	if checker.esc_set()
 	{
 		return Err(SyntaxError::BadEscSeq(last, '\0'));
-	}	
+	}
 
 	let mut new_token = String::new();
-	
+
 	if !buffer.is_empty()
 	{
 		new_token = buffer.clone();
@@ -281,7 +281,7 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 		checker.feed_token(&new_token, !DELIM, last);
 		tokens.push(TokenType::Normal(new_token));
 	}
-	
+
 	try!(checker.assert_valid(last, false));
 
 	Ok(tokens)

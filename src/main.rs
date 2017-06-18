@@ -1,11 +1,9 @@
-mod types;
+mod unit;
 mod config;
-mod database;
 mod parse;
 
-use types::*;
+use unit::*;
 use config::*;
-use database::*;
 use std::io;
 
 
