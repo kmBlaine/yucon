@@ -18,7 +18,7 @@ const OUTPUT: bool = true;
 pub const NO_PREFIX: char = '\0';
 
 #[derive(Debug)]
-enum ConversionFmt
+pub enum ConversionFmt
 {
 	Short,
 	Desc,
@@ -65,7 +65,7 @@ pub struct Conversion
 	to: Option<Rc<Unit>>,
 	input: f64,
 	pub result: Result<f64, ConversionError>,
-	format: ConversionFmt,
+	pub format: ConversionFmt,
 }
 
 impl Conversion
