@@ -61,10 +61,10 @@ use std::num::ParseFloatError;
 enum ParsePropertyError
 {
 	SyntaxError(SyntaxError),
-    NoSuchProperty(String),
-    NoSuchType    (String),
-    EmptyField    (String),
-    InvalidField  (ParseFloatError),
+	NoSuchProperty(String),
+	NoSuchType    (String),
+	EmptyField    (String),
+	InvalidField  (ParseFloatError),
 }
 
 impl Error for ParsePropertyError

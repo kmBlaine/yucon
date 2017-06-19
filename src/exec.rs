@@ -261,8 +261,8 @@ pub fn convert(input: f64, from_prefix: char, from: String,
 	output_val /= prefix_as_num(conversion.to_prefix).powi(to_dims);
 
 	// if the output value is NaN, INF, or too small to properly represent
-	// Unlike input, getting exactly zero is unlikely because of floating point errors
-	if !output_val.is_normal()
+	// Exactly 0 is acceptable however which is_normal() does not account for
+	if (!output_val.is_normal()) && (output_val != 0.0)
 	{
 		conversion.result = Err(ConversionError::OutOfRange(OUTPUT));
 		return conversion;
