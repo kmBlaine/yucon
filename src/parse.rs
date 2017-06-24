@@ -35,10 +35,10 @@ impl Display for SyntaxError
 		match *self
 		{
 		SyntaxError::Expected(ref index, ref msg) => {
-			write!(f, "@ col {}: syntax error: expected {}", index+1, msg)
+			write!(f, "syntax error @ col {}: expected {}", index+1, msg)
 		},
 		SyntaxError::BadEscSeq(ref index, ref ch) => {
-			write!(f, "@ col {}: syntax error: bad escape sequence: \\{}", index+1, ch)
+			write!(f, "syntax error @ col {}: bad escape sequence: \\{}", index+1, ch)
 		},
 		}
 	}
@@ -116,6 +116,8 @@ pub trait SyntaxChecker
 	fn is_esc(&self, ch: char) -> bool;
 	fn is_comment(&self, ch: char) -> bool;
 	fn is_delim(&self, ch: char) -> bool;
+	fn is_preserved_delim(&self, ch: char) -> bool;
+	fn esc_char(&self) -> char;
 	fn valid(&self) -> bool;
 	fn assert_valid(&self, index: usize, more_tokens: bool) -> Result<(), SyntaxError>;
 	fn esc_set(&self) -> bool;
@@ -211,6 +213,13 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 		{
 			if checker.is_delim(ch) || checker.is_esc(ch) || checker.is_comment(ch)
 			{
+				buffer.push(ch);
+				checker.set_esc(false);
+				delim_pushed = false;
+			}
+			else if checker.is_preserved_delim(ch)
+			{
+				buffer.push(checker.esc_char());
 				buffer.push(ch);
 				checker.set_esc(false);
 				delim_pushed = false;

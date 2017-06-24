@@ -437,6 +437,16 @@ impl<'a> SyntaxChecker for UnitPropertyCheck<'a>
 		ch == '='
 	}
 	
+	fn is_preserved_delim(&self, ch: char) -> bool
+	{
+		false
+	}
+	
+	fn esc_char(&self) -> char
+	{
+		'\\'
+	}
+	
 	fn valid(&self) -> bool
 	{
 		self.valid
