@@ -158,30 +158,61 @@ fn main() {
 
 	let (opts, mut args) = match Options::get_opts()
 	{
-	Ok(results) => results,
-	Err(msg) => {
-		println!("{}", msg);
-		return;
-	},
+		Ok(results) => results,
+		Err(msg) => {
+			println!("{}", msg);
+			return;
+		},
 	};
 
 	let input_val = match exec::parse_number_expr(&args[0])
 	{
-	Ok(expr) => {
-		println!("Recall is {}", expr.recall);
-		expr.value
-	},
-	Err(err) => {
-		println!("In token \'{}\': {}", &args[0], err);
-		return;
-	},
+		Ok(expr) => {
+			println!("Value recall is {}", expr.recall);
+			expr.value
+		},
+		Err(err) => {
+			println!("In token \'{}\': {}", &args[0], err);
+			return;
+		},
+	};
+	
+	let mut input_unit = match exec::parse_unit_expr(&args[1])
+	{
+		Ok(expr) => {
+			println!("Input unit recall is {}", expr.recall);
+			expr
+		},
+		Err(err) => {
+			println!("In token \'{}\': {}", &args[1], err);
+			return;
+		},
+	};
+	
+	let mut output_unit = match exec::parse_unit_expr(&args[2])
+	{
+		Ok(expr) => {
+			println!("Output unit recall is {}", expr.recall);
+			expr
+		},
+		Err(err) => {
+			println!("In token \'{}\': {}", &args[2], err);
+			return;
+		},
 	};
 
-	let mut args_iter = args.drain(..);
-	args_iter.next(); // skip the input value. already got
+	if input_unit.alias.is_none()
+	{
+		input_unit.alias = Some("m".to_string());
+	}
+	
+	if output_unit.alias.is_none()
+	{
+		output_unit.alias = Some("m".to_string());
+	}
 
-	let mut conversion = exec::convert(input_val, exec::NO_PREFIX, args_iter.next().unwrap(),
-			exec::NO_PREFIX, args_iter.next().unwrap(), &units);
+	let mut conversion = exec::convert(input_val, input_unit.prefix, input_unit.alias.unwrap(),
+			output_unit.prefix, output_unit.alias.unwrap(), &units);
 	conversion.format = opts.format;
 
 	println!("{}", conversion);

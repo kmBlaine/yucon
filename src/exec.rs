@@ -86,9 +86,9 @@ pub enum ConversionFmt
 	Long,
 }
 
-fn prefix_as_num(prefix: char) -> f64
+fn prefix_as_num(prefix: char) -> Option<f64>
 {
-	match prefix
+	let num: f64 = match prefix
 	{
 	'Y' => 10.0e24,
 	'Z' => 10.0e21,
@@ -111,8 +111,10 @@ fn prefix_as_num(prefix: char) -> f64
 	'a' => 10.0e-18,
 	'z' => 10.0e-21,
 	'y' => 10.0e-24,
-	_   => 1.0, // default
-	}
+	_   => return None, // default
+	};
+	
+	Some(num)
 }
 
 #[derive(Debug)]
@@ -431,6 +433,267 @@ pub fn parse_number_expr(token: &String) -> Result<NumberExpr, ExprParseError>
 	Ok(value_expr)
 }
 
+
+enum UnitCheckState
+{
+	NameOrExpr,
+	UnderscoreOrColon,
+	PrefixOrName,
+	Colon,
+	Trailing,
+}
+
+
+struct UnitCheck
+{
+	esc_seq: bool,
+	valid: bool,
+	state: UnitCheckState,
+}
+
+impl UnitCheck
+{
+	fn new() -> UnitCheck
+	{
+		UnitCheck {
+			esc_seq: false,
+			valid: true,
+			state: UnitCheckState::NameOrExpr,
+		}
+	}
+}
+
+impl SyntaxChecker for UnitCheck
+{
+	fn feed_token(&mut self, token: &str, delim: bool, index: usize) -> bool
+	{
+		if self.valid
+		{
+			match self.state
+			{
+			UnitCheckState::NameOrExpr if !delim => {
+				if token.is_empty()
+				{
+					self.state = UnitCheckState::UnderscoreOrColon;
+				}
+				else
+				{
+					self.state = UnitCheckState::Trailing;
+				}
+			},
+			UnitCheckState::UnderscoreOrColon if delim => {
+				if token == "_"
+				{
+					self.state = UnitCheckState::PrefixOrName;
+				}
+				else if token == ":"
+				{
+					self.state = UnitCheckState::Trailing;
+				}
+				else
+				{
+					self.valid = false;
+				}
+			},
+			UnitCheckState::PrefixOrName if !delim => {
+				if token.is_empty()
+				{
+					self.valid = false;
+				}
+				else if token.len() < 2
+				{
+					self.state = UnitCheckState::Colon;
+				}
+				else
+				{
+					self.state = UnitCheckState::Trailing;
+				}
+			},
+			UnitCheckState::Colon if delim => {
+				if token == ":"
+				{
+					self.state = UnitCheckState::Trailing;
+				}
+				else
+				{
+					self.valid = false;
+				}
+			},
+			UnitCheckState::Trailing => {
+				if !token.is_empty()
+				{
+					self.valid = false;
+				}
+			},
+			_ => unreachable!("unit expression syntax check reached impossible state"),
+			};
+		}
+		
+		self.valid
+	}
+	
+	fn is_esc(&self, ch: char) -> bool
+	{
+		ch == '\\'
+	}
+	
+	fn is_comment(&self, ch: char) -> bool
+	{
+		false
+	}
+	
+	fn is_delim(&self, ch: char) -> bool
+	{
+		ch == '_' ||
+		ch == ':'
+	}
+	
+	fn is_preserved_delim(&self, ch: char) -> bool
+	{
+		false
+	}
+	
+	fn esc_char(&self) -> char
+	{
+		'\\'
+	}
+	
+	fn valid(&self) -> bool
+	{
+		self.valid
+	}
+	
+	fn assert_valid(&self, index: usize, more_tokens: bool) -> Result<(), SyntaxError>
+	{
+		if !more_tokens || !self.valid
+		{
+			match self.state
+			{
+			UnitCheckState::NameOrExpr | UnitCheckState::UnderscoreOrColon => {
+				return Err(SyntaxError::Expected(index,
+						"unit name or recall expression".to_string()));
+			},
+			UnitCheckState::PrefixOrName | UnitCheckState::Colon => {
+				return Err(SyntaxError::Expected(index, 
+						"metric prefix together with unit name / recall expression".to_string()));
+			},
+			_ => (),
+			};
+		}
+		
+		if !self.valid
+		{
+			match self.state
+			{
+			UnitCheckState::Trailing => {
+				return Err(SyntaxError::Expected(index,
+						"no trailing expressions after unit name".to_string()));
+			},
+			_ => (),
+			};
+		}
+		
+		Ok(())
+	}
+	
+	fn esc_set(&self) -> bool
+	{
+		self.esc_seq
+	}
+	
+	fn set_esc(&mut self, set: bool)
+	{
+		self.esc_seq = set;
+	}
+	
+	fn reset(&mut self)
+	{
+		self.valid = true;
+		self.state = UnitCheckState::NameOrExpr;
+		self.esc_seq = false;
+	}
+}
+
+pub struct UnitExpr
+{
+	pub prefix: char,
+	pub alias: Option<String>,
+	pub recall: bool,
+}
+
+pub fn parse_unit_expr(token: &String) -> Result<UnitExpr, ExprParseError>
+{
+	let mut expr_checker = UnitCheck::new();
+	let mut tokens: Vec<TokenType> = try!(parse::tokenize(token, &mut expr_checker));
+	tokens.retain(|tok| !tok.is_empty());
+	
+	if tokens.len() < 1
+	{
+		return Err(ExprParseError::from(SyntaxError::Expected(0,
+				"metric prefix together with unit name / recall expression".to_string())));
+	}
+	
+	let mut unit_expr = UnitExpr {
+		prefix: NO_PREFIX,
+		alias: None,
+		recall: false,
+	};
+
+	let mut tokens_iter = tokens.drain(..);
+
+	match tokens_iter.next().unwrap()
+	{
+	TokenType::Delim(ref delim) if delim == "_" => {
+		let mut alias = tokens_iter.next().unwrap().unwrap();
+		let mut new_alias = String::with_capacity(alias.len() - 1);
+		let mut alias_iter = alias.chars();
+		let prefix = alias_iter.next().unwrap();
+
+		if prefix_as_num(prefix).is_none()
+		{
+			return Err(ExprParseError::BadPrefix(prefix));
+		}
+		
+		unit_expr.prefix = prefix;
+		
+		if let Some(trailing) = tokens_iter.next()
+		{
+			match trailing
+			{
+			TokenType::Delim(ref colon) if colon == ":" => {
+				unit_expr.recall = true;
+			},
+			_ => unreachable!("illegal delimiter in unit expression after syntax check"),
+			};
+		}
+		else
+		{
+			for ch in alias_iter
+			{
+				new_alias.push(ch);
+			}
+			
+			unit_expr.alias = Some(new_alias);
+		}
+		
+		if tokens_iter.next().is_some()
+		{
+			unreachable!("extra tokens in unit expression after syntax check");
+		}
+	},
+	TokenType::Delim(ref delim) if delim == ":" => {
+		unit_expr.recall = true;
+	},
+	TokenType::Normal(alias) => {
+		unit_expr.alias = Some(alias);
+	},
+	_ => unreachable!("unexpected token begins unit expression"),
+	};
+
+	Ok(unit_expr)
+}
+
+
 /* Performs a unit conversion given as an input value, input unit and prefix,
  * and an output unit and prefix. Fetches the units from the given units database
  * A struct conversion is returned allowing the caller to do with it as they
@@ -483,6 +746,13 @@ pub fn convert(input: f64, from_prefix: char, from: String,
 		conversion.result = Err(ConversionError::UnitNotFound(OUTPUT));
 		return conversion;
 	}
+	
+	if conversion.to.as_ref().unwrap().unit_type !=
+		conversion.from.as_ref().unwrap().unit_type
+	{
+		conversion.result = Err(ConversionError::TypeMismatch);
+		return conversion;
+	}
 
 	// do not initialize yet. we will fetch these values from conversion
 	let from_conv_factor: f64;
@@ -510,7 +780,9 @@ pub fn convert(input: f64, from_prefix: char, from: String,
 	} // end borrow scope
 
 	// S1
-	let mut output_val = conversion.input * prefix_as_num(conversion.from_prefix).powi(from_dims);
+	let mut output_val = conversion.input * prefix_as_num(
+		conversion.from_prefix)
+		.unwrap().powi(from_dims);
 
 	// S2
 	if from_is_inverse
@@ -529,7 +801,7 @@ pub fn convert(input: f64, from_prefix: char, from: String,
 	}
 
 	// S7
-	output_val /= prefix_as_num(conversion.to_prefix).powi(to_dims);
+	output_val /= prefix_as_num(conversion.to_prefix).unwrap().powi(to_dims);
 
 	// if the output value is NaN, INF, or too small to properly represent
 	// Exactly 0 is acceptable however which is_normal() does not account for
