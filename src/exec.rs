@@ -68,6 +68,34 @@ impl From<SyntaxError> for ExprParseError
 }
 
 #[derive(Debug)]
+pub struct GeneralParseError
+{
+	pub err: ExprParseError,
+	pub failed_at: usize, // argument index at which parsing failed
+}
+
+impl Error for GeneralParseError
+{
+	fn description(&self) -> &str
+	{
+		self.err.description()
+	}
+	
+	fn cause(&self) -> Option<&Error>
+	{
+		Some(&self.err)
+	}
+}
+
+impl Display for GeneralParseError
+{
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+	{
+		write!(f, "{}", self.err)
+	}
+}
+
+#[derive(Debug)]
 pub enum ConversionError
 {
 	OutOfRange(bool),   // input or output value not a valid f64, false: input
@@ -694,6 +722,116 @@ pub fn parse_unit_expr(token: &String) -> Result<UnitExpr, ExprParseError>
 }
 
 
+pub struct ConvPrimitive
+{
+	pub input_val: NumberExpr,
+	pub input_unit: UnitExpr,
+	pub output_unit: UnitExpr,
+}
+
+/* Enum for the state matchine of the to_conv_primitive function.
+ */
+enum ConvPrimState
+{
+	GetValueExpr,  // get the value expression
+	GetInputExpr,  // get the input unit expression
+	GetOutputExpr, // get the output unit expression
+	GetMoreOutput, // get any additional output expressions. currently not used
+}
+
+/* Takes a line of input that has had its spaces removed as a Vec of TokenType
+ * and converts this line into a Number and Unit Exprs for convient use later
+ * in the program. Acts as an intermediary to filter out syntax errors before
+ * they reach the main conversion routines.
+ * 
+ * Paramters:
+ *   tokens - line tokenized at spaces given as Vec<TokenType>
+ * 
+ * Returns: Result<>
+ *   Ok(ConvPrimitve) - the line converted to expressions
+ *   Error(ExprParseError) - error if any occured
+ */
+pub fn to_conv_primitive(mut tokens: Vec<TokenType>) -> Result<ConvPrimitive, GeneralParseError>
+{
+	let mut value_expr = NumberExpr { value: 0.0, recall: false };
+	let mut unit_in_expr = UnitExpr { prefix: NO_PREFIX,
+	                                  alias: None,
+	                                  recall: false };
+	let mut unit_out_expr = UnitExpr { prefix: NO_PREFIX,
+	                                   alias: None,
+	                                   recall: false };
+	tokens.retain(|tok| !tok.is_empty());
+	let mut state = ConvPrimState::GetValueExpr;
+	
+	for (index, token) in tokens.drain(..).enumerate()
+	{
+		let mut expr = None;
+		
+		match token
+		{
+		TokenType::Delim(_) =>
+		{
+			continue;
+		},
+		_ => {
+			expr = Some(token.unwrap());
+		},
+		};
+		
+		match state
+		{
+		ConvPrimState::GetValueExpr => {
+			let new_value_expr = parse_number_expr(&expr.unwrap());
+			value_expr = if new_value_expr.is_ok()
+			{
+				new_value_expr.unwrap()
+			}
+			else
+			{
+				return Err(GeneralParseError { err: new_value_expr.err().unwrap(),
+				                               failed_at: index });
+			};
+			state = ConvPrimState::GetInputExpr;
+		},
+		ConvPrimState::GetInputExpr => {
+			let new_unit_in = parse_unit_expr(&expr.unwrap());
+			unit_in_expr = if new_unit_in.is_ok()
+			{
+				new_unit_in.unwrap()
+			}
+			else
+			{
+				return Err(GeneralParseError { err: new_unit_in.err().unwrap(),
+				                               failed_at: index });
+			};
+			state = ConvPrimState::GetOutputExpr;
+		},
+		ConvPrimState::GetOutputExpr => {
+			let new_unit_out = parse_unit_expr(&expr.unwrap());
+			unit_out_expr = if new_unit_out.is_ok()
+			{
+				new_unit_out.unwrap()
+			}
+			else
+			{
+				return Err(GeneralParseError { err: new_unit_out.err().unwrap(),
+				                               failed_at: index });
+			};
+			state = ConvPrimState::GetMoreOutput;
+		},
+		_ => {
+			// dummy code for the moment while implemented. needs to be removed
+			unreachable!("too many arguments given to to_conv_primitve()");
+		},
+		};
+	}
+	
+	Ok(ConvPrimitive { input_val: value_expr,
+	                   input_unit: unit_in_expr,
+	                   output_unit: unit_out_expr })
+}
+
+
 /* Performs a unit conversion given as an input value, input unit and prefix,
  * and an output unit and prefix. Fetches the units from the given units database
  * A struct conversion is returned allowing the caller to do with it as they
@@ -814,4 +952,17 @@ pub fn convert(input: f64, from_prefix: char, from: String,
 	conversion.result = Ok(output_val);
 
 	conversion
+}
+
+pub fn convert_all(conv_primitive: ConvPrimitive, units: &UnitDatabase) -> Vec<Conversion>
+{
+	let mut all_conversions = Vec::with_capacity(1);
+	all_conversions.push(
+		convert(conv_primitive.input_val.value,
+		        conv_primitive.input_unit.prefix, conv_primitive.input_unit.alias.unwrap(),
+		        conv_primitive.output_unit.prefix, conv_primitive.output_unit.alias.unwrap(),
+		        units)
+	);
+	
+	all_conversions
 }

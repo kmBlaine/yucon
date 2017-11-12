@@ -34,7 +34,7 @@ Copyright (C) 2016-2017 Blaine Murphy";
 static VERSION_MSG: &'static str = "\
 YUCON - General Purpose Unit Converter - v0.2
   Copyright (C) 2016-2017 Blaine Murphy
-  Released 24 Jun 2017 - commit [COMMIT NUM HERE]
+  Released 11 Nov 2017
   Source code available at <https://github.com/kmBlaine/yucon>
   See changelog for version specific details
   License: GNU Public License v3+
@@ -164,56 +164,39 @@ fn main() {
 			return;
 		},
 	};
-
-	let input_val = match exec::parse_number_expr(&args[0])
-	{
-		Ok(expr) => {
-			println!("Value recall is {}", expr.recall);
-			expr.value
-		},
-		Err(err) => {
-			println!("In token \'{}\': {}", &args[0], err);
-			return;
-		},
-	};
 	
-	let mut input_unit = match exec::parse_unit_expr(&args[1])
-	{
-		Ok(expr) => {
-			println!("Input unit recall is {}", expr.recall);
-			expr
-		},
-		Err(err) => {
-			println!("In token \'{}\': {}", &args[1], err);
-			return;
-		},
-	};
+	let mut args_wrapped: Vec<parse::TokenType> = Vec::with_capacity(3);
 	
-	let mut output_unit = match exec::parse_unit_expr(&args[2])
+	for arg in &args
 	{
-		Ok(expr) => {
-			println!("Output unit recall is {}", expr.recall);
-			expr
-		},
-		Err(err) => {
-			println!("In token \'{}\': {}", &args[2], err);
-			return;
-		},
-	};
-
-	if input_unit.alias.is_none()
-	{
-		input_unit.alias = Some("m".to_string());
+		args_wrapped.push(parse::TokenType::Normal(arg.clone()));
 	}
 	
-	if output_unit.alias.is_none()
+	let mut conv_primitive = match exec::to_conv_primitive(args_wrapped)
 	{
-		output_unit.alias = Some("m".to_string());
+		Ok(results) => results,
+		Err(err) => {
+			println!("In token \'{}\': {}", args[err.failed_at], err);
+			return;
+		},
+	};
+
+	println!("Value recall is {}", conv_primitive.input_val.recall);
+	println!("Input unit recall is {}", conv_primitive.input_unit.recall);
+	println!("Output unit recall is {}", conv_primitive.input_unit.recall);
+
+	if conv_primitive.input_unit.alias.is_none()
+	{
+		conv_primitive.input_unit.alias = Some("m".to_string());
+	}
+	
+	if conv_primitive.output_unit.alias.is_none()
+	{
+		conv_primitive.output_unit.alias = Some("m".to_string());
 	}
 
-	let mut conversion = exec::convert(input_val, input_unit.prefix, input_unit.alias.unwrap(),
-			output_unit.prefix, output_unit.alias.unwrap(), &units);
-	conversion.format = opts.format;
-
-	println!("{}", conversion);
+	let mut conversion = exec::convert_all(conv_primitive, &units);
+	
+	conversion[0].format = opts.format;
+	println!("{}", conversion[0]);
 }
