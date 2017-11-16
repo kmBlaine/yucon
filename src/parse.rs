@@ -161,6 +161,17 @@ impl TokenType
 		}
 	}
 	
+	// Peeks at the wrapped value. Returns reference to String for convenience
+	// when working with borrowed TokenTypes
+	pub fn peek(&self) -> &String
+	{
+		match *self
+		{
+		TokenType::Delim(ref tok) => tok,
+		TokenType::Normal(ref tok) => tok,
+		}
+	}
+	
 	// Checks if the contained string is empty so that unwrapping is not
 	// necessary
 	pub fn is_empty(&self) -> bool
@@ -202,6 +213,7 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 	let mut tokens = Vec::with_capacity(5); // unit properties contain at least 3 tokens, CommonName 5. avoids excessive reallocation
 	let mut delim_pushed = false;
 	let mut last: usize = 0;
+	let mut last_ch: char = '\0';
 
 	for (index, ch) in line.chars().enumerate()
 	{
@@ -227,6 +239,7 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 			else
 			{
 				last = index;
+				last_ch = ch;
 				break;
 			}
 		}
@@ -269,11 +282,21 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
 
 		try!(checker.assert_valid(index, true));
 		last = index;
+		last_ch = ch;
 	}
 
 	if checker.esc_set()
 	{
-		return Err(SyntaxError::BadEscSeq(last, '\0'));
+		return Err(SyntaxError::BadEscSeq(last,
+						if last_ch == checker.esc_char()
+						{
+							'\0'
+						}
+						else
+						{
+							last_ch
+						})
+		);
 	}
 
 	let mut new_token = String::new();
