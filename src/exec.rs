@@ -106,12 +106,25 @@ const INPUT: bool = false;
 const OUTPUT: bool = true;
 pub const NO_PREFIX: char = '\0';
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ConversionFmt
 {
 	Short,
 	Desc,
 	Long,
+}
+
+impl Display for ConversionFmt
+{
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+	{
+		match *self
+		{
+		ConversionFmt::Short => write!(f, "s: short / value only"),
+		ConversionFmt::Desc => write!(f, "d: descriptive / value and output unit"),
+		ConversionFmt::Long => write!(f, "l: long / input and output values and units"),
+		}
+	}
 }
 
 fn prefix_as_num(prefix: char) -> Option<f64>
@@ -751,7 +764,7 @@ enum ConvPrimState
  *   Ok(ConvPrimitve) - the line converted to expressions
  *   Error(ExprParseError) - error if any occured
  */
-pub fn to_conv_primitive(mut tokens: Vec<TokenType>) -> Result<ConvPrimitive, GeneralParseError>
+pub fn to_conv_primitive(mut tokens: &Vec<TokenType>) -> Result<ConvPrimitive, GeneralParseError>
 {
 	let mut value_expr = NumberExpr { value: 0.0, recall: false };
 	let mut unit_in_expr = UnitExpr { prefix: NO_PREFIX,
@@ -760,28 +773,24 @@ pub fn to_conv_primitive(mut tokens: Vec<TokenType>) -> Result<ConvPrimitive, Ge
 	let mut unit_out_expr = UnitExpr { prefix: NO_PREFIX,
 	                                   alias: None,
 	                                   recall: false };
-	tokens.retain(|tok| !tok.is_empty());
+	
 	let mut state = ConvPrimState::GetValueExpr;
 	
-	for (index, token) in tokens.drain(..).enumerate()
+	for (index, token) in tokens.iter().enumerate()
 	{
-		let mut expr = None;
-		
-		match token
+		let expr = match token
 		{
-		TokenType::Delim(_) =>
-		{
-			continue;
-		},
-		_ => {
-			expr = Some(token.unwrap());
-		},
+			&TokenType::Delim(_) =>
+			{
+				unreachable!("conversion primitive generator was given unsanitary input. delimiter detected");
+			},
+			_ => token.peek(),
 		};
 		
 		match state
 		{
 		ConvPrimState::GetValueExpr => {
-			let new_value_expr = parse_number_expr(&expr.unwrap());
+			let new_value_expr = parse_number_expr(expr);
 			value_expr = if new_value_expr.is_ok()
 			{
 				new_value_expr.unwrap()
@@ -794,7 +803,7 @@ pub fn to_conv_primitive(mut tokens: Vec<TokenType>) -> Result<ConvPrimitive, Ge
 			state = ConvPrimState::GetInputExpr;
 		},
 		ConvPrimState::GetInputExpr => {
-			let new_unit_in = parse_unit_expr(&expr.unwrap());
+			let new_unit_in = parse_unit_expr(expr);
 			unit_in_expr = if new_unit_in.is_ok()
 			{
 				new_unit_in.unwrap()
@@ -807,7 +816,7 @@ pub fn to_conv_primitive(mut tokens: Vec<TokenType>) -> Result<ConvPrimitive, Ge
 			state = ConvPrimState::GetOutputExpr;
 		},
 		ConvPrimState::GetOutputExpr => {
-			let new_unit_out = parse_unit_expr(&expr.unwrap());
+			let new_unit_out = parse_unit_expr(expr);
 			unit_out_expr = if new_unit_out.is_ok()
 			{
 				new_unit_out.unwrap()

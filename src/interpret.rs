@@ -154,7 +154,7 @@ impl SyntaxChecker for LineCheck
 	}
 	fn set_esc(&mut self, set: bool)
 	{
-		self.esc == set;
+		self.esc = set;
 	}
 	fn reset(&mut self)
 	{
@@ -164,7 +164,7 @@ impl SyntaxChecker for LineCheck
 
 pub struct Interpreter<I, O> where I: Read, O:io:: Write
 {
-	format: ConversionFmt,
+	pub format: ConversionFmt,
 	input_stream: BufReader<I>,
 	output_stream: O,
 	input_unit: Option<String>,
@@ -245,21 +245,25 @@ impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 			
 			if next_tok.is_none()
 			{
-				return Err(InterpretErr::UnrecognizedCmd("incomplete".to_string()));
+				let mut current_fmt = String::with_capacity(80);
+				write!(current_fmt, "{}", self.format);
+				cmd_result = InterpretErr::CmdSuccess(current_fmt);
 			}
-			let mut next_fmt = ConversionFmt::Desc;
-			let value = next_tok.unwrap();
-			
-			match value.peek().as_ref()
+			else
 			{
-			"s" => next_fmt = ConversionFmt::Short,
-			"d" => {},
-			"l" => next_fmt = ConversionFmt::Long,
-			_ => return Err(InterpretErr::InvalidState(value.peek().clone())),
+				let value = next_tok.unwrap();
+				
+				let next_fmt = match value.peek().as_ref()
+				{
+				"s" => ConversionFmt::Short,
+				"d" => ConversionFmt::Desc,
+				"l" => ConversionFmt::Long,
+				_ => return Err(InterpretErr::InvalidState(value.peek().clone())),
+				};
+				
+				self.format = next_fmt;
+				cmd_result = InterpretErr::CmdSuccess("Okay.".to_string());
 			}
-			
-			self.format = next_fmt;
-			cmd_result = InterpretErr::CmdSuccess("Okay.".to_string());
 		},
 		"help" => {
 			cmd_result = InterpretErr::HelpSig;
@@ -343,5 +347,12 @@ impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 		write!(self.output_stream, "{}", element);
 		
 		self.output_stream.flush();
+	}
+	
+	pub fn newline(&mut self)
+	{
+		write!(self.output_stream, "{}",
+		       if cfg!(windows) { "\r\n" } else { "\n" }
+		);
 	}
 }

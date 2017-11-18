@@ -14,7 +14,7 @@ use std::io::stdout;
 static HELP_MSG: &'static str = "\
 YUCON - General Purpose Unit Converter - v0.2
 Usage:
-  yucon [options] #.# <input_unit> <output_unit>
+  yucon [options] <#> <input_unit> <output_unit>
 
   In first form, perform conversion given on the command line
 
@@ -28,7 +28,7 @@ Examples:
   $ yucon -l 1 in mm
     1 in = 25.4 mm
 
-  $ yucon 0 C
+  $ yucon 0 C F
     32.02 F
 
 This is free software licensed under the GNU General Public License v3
@@ -38,7 +38,7 @@ Copyright (C) 2016-2017 Blaine Murphy";
 static VERSION_MSG: &'static str = "\
 YUCON - General Purpose Unit Converter - v0.2
   Copyright (C) 2016-2017 Blaine Murphy
-  Released 15 Nov 2017
+  Released 18 Nov 2017
   Source code available at <https://github.com/kmBlaine/yucon>
   See changelog for version specific details
   License: GNU Public License v3+
@@ -70,9 +70,7 @@ Program Variables:
   format          - output format. may be \'s\', \'d\', or \'l\'
   value           - recall value for conversions
   input_unit      - recall for unit being converted from
-  output_unit     - recall for unit being converted to
-
-";
+  output_unit     - recall for unit being converted to";
 
 struct Options
 {
@@ -174,14 +172,17 @@ impl Options
 	}
 }
 
-fn line_interpreter()
+fn line_interpreter(units: &UnitDatabase)
 {
+	let prompt = "> ".to_string();
 	let mut interpreter: Interpreter<_, _> =
 		interpret::Interpreter::using_streams(stdin(), stdout());
 	
 	loop
 	{
-		let mut cmd_result = interpreter.interpret();
+		interpreter.newline();
+		interpreter.publish(&prompt, &None);
+		let cmd_result = interpreter.interpret();
 		let tokens = match cmd_result
 		{
 			Err(cmd_mesg) => {
@@ -195,15 +196,19 @@ fn line_interpreter()
 				},
 				InterpretErr::HelpSig => {
 					interpreter.publish(&INTERACTIVE_HELP_MSG.to_string(), &None);
+					interpreter.newline();
 				},
 				InterpretErr::VersionSig => {
 					interpreter.publish(&VERSION_MSG.to_string(), &None);
+					interpreter.newline();
 				},
 				InterpretErr::CmdSuccess(..) => {
 					interpreter.publish(&cmd_mesg, &None);
+					interpreter.newline();
 				}
 				_ => {
 					interpreter.publish(&cmd_mesg, &Some("Error: ".to_string()));
+					interpreter.newline();
 				},
 				};
 				
@@ -212,9 +217,21 @@ fn line_interpreter()
 			Ok(toks) => toks,
 		};
 		
-		for token in tokens
+		let conv_primitive = match exec::to_conv_primitive(&tokens)
 		{
-			println!("{}", token.peek());
+			Ok(prim) => prim,
+			Err(err) => {
+				interpreter.publish(&err, &Some("Error: ".to_string()));
+				interpreter.newline();
+				continue;
+			},
+		};
+		
+		for mut conversion in exec::convert_all(conv_primitive, units)
+		{
+			conversion.format = interpreter.format;
+			interpreter.publish(&conversion, &None);
+			interpreter.newline();
 		}
 	}
 }
@@ -240,7 +257,7 @@ fn main() {
 	
 	if args.is_empty()
 	{
-		line_interpreter();
+		line_interpreter(&units);
 	}
 	else
 	{
@@ -251,7 +268,7 @@ fn main() {
 			args_wrapped.push(parse::TokenType::Normal(arg.clone()));
 		}
 		
-		let mut conv_primitive = match exec::to_conv_primitive(args_wrapped)
+		let mut conv_primitive = match exec::to_conv_primitive(&args_wrapped)
 		{
 			Ok(results) => results,
 			Err(err) => {
