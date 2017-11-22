@@ -131,27 +131,27 @@ fn prefix_as_num(prefix: char) -> Option<f64>
 {
 	let num: f64 = match prefix
 	{
-	'Y' => 10.0e24,
-	'Z' => 10.0e21,
-	'E' => 10.0e18,
-	'P' => 10.0e15,
-	'T' => 10.0e12,
-	'G' => 10.0e9,
-	'M' => 10.0e6,
-	'k' => 10.0e3,
-	'h' => 10.0e2,
-	'D' => 10.0e1,
+	'Y' => 1.0e24,
+	'Z' => 1.0e21,
+	'E' => 1.0e18,
+	'P' => 1.0e15,
+	'T' => 1.0e12,
+	'G' => 1.0e9,
+	'M' => 1.0e6,
+	'k' => 1.0e3,
+	'h' => 1.0e2,
+	'D' => 1.0e1,
 	NO_PREFIX => 1.0,
-	'd' => 10.0e-1,
-	'c' => 10.0e-2,
-	'm' => 10.0e-3,
-	'u' => 10.0e-6,
-	'n' => 10.0e-9,
-	'p' => 10.0e-12,
-	'f' => 10.0e-15,
-	'a' => 10.0e-18,
-	'z' => 10.0e-21,
-	'y' => 10.0e-24,
+	'd' => 1.0e-1,
+	'c' => 1.0e-2,
+	'm' => 1.0e-3,
+	'u' => 1.0e-6,
+	'n' => 1.0e-9,
+	'p' => 1.0e-12,
+	'f' => 1.0e-15,
+	'a' => 1.0e-18,
+	'z' => 1.0e-21,
+	'y' => 1.0e-24,
 	_   => return None, // default
 	};
 	
@@ -163,11 +163,11 @@ pub struct Conversion
 {
 	from_prefix: char,
 	to_prefix: char,
-	from_alias: String,
-	to_alias: String,
-	from: Option<Rc<Unit>>,
-	to: Option<Rc<Unit>>,
-	input: f64,
+	pub from_alias: String,
+	pub to_alias: String,
+	pub from: Option<Rc<Unit>>,
+	pub to: Option<Rc<Unit>>,
+	pub input: f64,
 	pub result: Result<f64, ConversionError>,
 	pub format: ConversionFmt,
 }
@@ -879,18 +879,18 @@ pub fn convert(input: f64, from_prefix: char, from: String,
 	}
 
 	conversion.from = units.query(&conversion.from_alias);
+	conversion.to = units.query(&conversion.to_alias);
 
 	if conversion.from.is_none()
 	{
 		conversion.result = Err(ConversionError::UnitNotFound(INPUT));
-		return conversion;
 	}
-
-	conversion.to = units.query(&conversion.to_alias);
-
 	if conversion.to.is_none()
 	{
 		conversion.result = Err(ConversionError::UnitNotFound(OUTPUT));
+	}
+	if conversion.result.is_err()
+	{
 		return conversion;
 	}
 	

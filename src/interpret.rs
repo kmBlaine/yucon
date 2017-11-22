@@ -14,6 +14,8 @@ use std::fmt::Display;
 use std::fmt::Write;
 use std::error::Error;
 
+static NONLITERAL_RECALL_MSG: &'static str = "recall variables must be literals";
+
 #[derive(Debug)]
 pub enum InterpretErr
 {
@@ -21,6 +23,10 @@ pub enum InterpretErr
 	UnrecognizedCmd(String),
 	InvalidState(String),
 	TokenizeErr(SyntaxError),
+	RecallErr(String, String),
+	UnknownLongOpt(String),
+	UnknownShortOpt(char),
+	IncompleteErr,
 	ExitSig,
 	BlankLine,
 	HelpSig,
@@ -38,6 +44,9 @@ impl Error for InterpretErr
 		InterpretErr::UnrecognizedCmd(..) => "unrecognized command or variable",
 		InterpretErr::InvalidState(..) => "invalid variable state",
 		InterpretErr::TokenizeErr(ref err) => err.description(),
+		InterpretErr::RecallErr(..) => "unable to recall variable",
+		InterpretErr::UnknownLongOpt(..) | InterpretErr::UnknownShortOpt(..) => "unknown program option",
+		InterpretErr::IncompleteErr => "command is incomplete",
 		InterpretErr::ExitSig => "user terminated session",
 		InterpretErr::BlankLine => "no action",
 		InterpretErr::HelpSig => "user requested help",
@@ -74,6 +83,15 @@ impl Display for InterpretErr
 		InterpretErr::TokenizeErr(ref err) => {
 			write!(f, "{}", err)
 		}
+		InterpretErr::RecallErr(ref which, ref reason) => {
+			write!(f, "{}: {}: {}", self.description(), which, reason)
+		},
+		InterpretErr::UnknownLongOpt(ref opt) => {
+			write!(f, "{}: {}", self.description(), opt)
+		},
+		InterpretErr::UnknownShortOpt(ref opt) => {
+			write!(f, "{}: {}", self.description(), opt)
+		},
 		_ => {
 			write!(f, "{}", self.description())
 		},
@@ -167,27 +185,19 @@ pub struct Interpreter<I, O> where I: Read, O:io:: Write
 	pub format: ConversionFmt,
 	input_stream: BufReader<I>,
 	output_stream: O,
+	input_value: Option<f64>,
 	input_unit: Option<String>,
 	output_unit: Option<String>,
 }
 
 impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 {
-	pub fn new() -> Interpreter<Stdin, Stdout>
-	{
-		Interpreter { format: ConversionFmt::Desc,
-		              input_stream: BufReader::new(stdin()),
-		              output_stream: stdout(),
-		              input_unit: None,
-		              output_unit: None,
-		}
-	}
-	
 	pub fn using_streams(istream: I, ostream: O) -> Interpreter<I, O>
 	{
 		Interpreter { format: ConversionFmt::Desc,
 		              input_stream: BufReader::new(istream),
 		              output_stream: ostream,
+		              input_value: None,
 		              input_unit: None,
 		              output_unit: None,
 		}
@@ -229,7 +239,6 @@ impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 		{
 			return Err(InterpretErr::BlankLine);
 		}
-		
 
 		let mut cmd_result = InterpretErr::BlankLine;
 		{ // scope to sequester borrow caused by iterator
@@ -289,14 +298,14 @@ impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 			}
 			else
 			{
-				let mut keyword_string = keyword.to_string();
-				let unit_expr_result = parse_unit_expr(&keyword_string);
+				let raw_expr = next_tok.unwrap().peek();
+				let unit_expr_result = parse_unit_expr(&raw_expr);
 				
 				if unit_expr_result.is_err()
 				{
-					keyword_string.clear();
-					write!(&mut keyword_string, "{}", unit_expr_result.err().unwrap());
-					return Err(InterpretErr::InvalidState(keyword_string));
+					let mut err_mesg = String::with_capacity(80);
+					write!(&mut err_mesg, "{}", unit_expr_result.err().unwrap());
+					return Err(InterpretErr::InvalidState(err_mesg));
 				}
 				let unit_expr = unit_expr_result.unwrap();
 				
@@ -305,9 +314,53 @@ impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 				   unit_expr.recall
 				{
 					return Err(InterpretErr::InvalidState(
-							"recall variables may only be a unit name".to_string()));
+							NONLITERAL_RECALL_MSG.to_string()));
 				}
 				
+				if is_input
+				{
+					self.input_unit = Some(unit_expr.alias.unwrap());
+				}
+				else
+				{
+					self.output_unit = Some(unit_expr.alias.unwrap());
+				}
+				cmd_result = InterpretErr::CmdSuccess("Okay.".to_string());
+			}
+		},
+		"value" => {
+			let next_tok = tokens_iter.next();
+			
+			if next_tok.is_none()
+			{
+				let mut value_str = String::with_capacity(20);
+				match self.input_value
+				{
+				None => write!(&mut value_str, "[not set]"),
+				Some(value) => write!(&mut value_str, "{}", value),
+				};
+				cmd_result = InterpretErr::CmdSuccess(value_str);
+			}
+			else
+			{
+				let value_expr_result = parse_number_expr(next_tok.unwrap().peek());
+				
+				if value_expr_result.is_err()
+				{
+					let mut err_str = String::with_capacity(80);
+					write!(&mut err_str, "{}", value_expr_result.err().unwrap());
+					return Err(InterpretErr::InvalidState(err_str));
+				}
+				
+				let value_expr = value_expr_result.unwrap();
+				
+				if value_expr.recall == true
+				{
+					return Err(InterpretErr::InvalidState(
+							NONLITERAL_RECALL_MSG.to_string()));
+				}
+				
+				self.input_value = Some(value_expr.value);
 				cmd_result = InterpretErr::CmdSuccess("Okay.".to_string());
 			}
 		},
@@ -333,7 +386,97 @@ impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 		
 		} // end sequestration of iterator
 		
+		if line_checker.argc < 3
+		{
+			return Err(InterpretErr::IncompleteErr);
+		}
+		
 		Ok(tokens)
+	}
+	
+	pub fn perform_recall(&self, exprs: &mut ConvPrimitive) -> Option<InterpretErr>
+	{
+		if exprs.input_val.recall
+		{
+			exprs.input_val.value = match self.input_value
+			{
+				None => {
+					return Some(InterpretErr::RecallErr("input value".to_string(),
+					                                   "not set". to_string()));
+				},
+				Some(val) => val,
+			}
+		}
+		
+		if exprs.input_unit.recall
+		{
+			exprs.input_unit.alias = match self.input_unit
+			{
+				None => {
+					return Some(InterpretErr::RecallErr("input unit".to_string(),
+					                                   "not set". to_string()));
+				}
+				Some(ref alias) => Some(alias.clone()),
+			}
+		}
+		
+		if exprs.output_unit.recall
+		{
+			exprs.output_unit.alias = match self.output_unit
+			{
+				None => {
+					return Some(InterpretErr::RecallErr("output unit".to_string(),
+					                                   "not set". to_string()));
+				}
+				Some(ref alias) => Some(alias.clone()),
+			}
+		}
+		
+		None
+	}
+	
+	pub fn update_recall(&mut self, conversions: &Vec<Conversion>)
+	{
+		for conversion in conversions.iter()
+		{
+			match conversion.result
+			{
+			Err(ref err) => {
+				match *err
+				{
+				ConversionError::OutOfRange(output) => {
+					if output
+					{
+						self.input_value = Some(conversion.input);
+					}
+					self.input_unit = Some(conversion.from_alias.clone());
+					self.output_unit = Some(conversion.to_alias.clone());
+				},
+				ConversionError::TypeMismatch => {
+					self.input_value = Some(conversion.input);
+					self.input_unit = Some(conversion.from_alias.clone());
+					self.output_unit = Some(conversion.to_alias.clone());
+				},
+				ConversionError::UnitNotFound(..) => {
+					if conversion.to.is_some()
+					{
+						self.output_unit = Some(conversion.to_alias.clone());
+					}
+					if conversion.from.is_some()
+					{
+						self.input_unit = Some(conversion.from_alias.clone());
+					}
+					self.input_value = Some(conversion.input);
+				},
+				};
+			},
+			_ => {
+				self.input_value = Some(conversion.input);
+				self.input_unit = Some(conversion.from_alias.clone());
+				self.output_unit = Some(conversion.to_alias.clone());
+			},
+			};
+		}
 	}
 	
 	pub fn publish<T>(&mut self, element: &T, mesg: &Option<String>) where T: Display
@@ -352,7 +495,7 @@ impl <I, O> Interpreter<I, O> where I: Read, O: io::Write
 	pub fn newline(&mut self)
 	{
 		write!(self.output_stream, "{}",
-		       if cfg!(windows) { "\r\n" } else { "\n" }
+		       if cfg!(target_os="windows") { "\r\n" } else { "\n" }
 		);
 	}
 }

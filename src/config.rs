@@ -757,7 +757,7 @@ fn add_unit(database: &mut UnitDatabase, new_unit: Unit, aliases: &Vec<Rc<String
 
 pub fn load_units_list() -> Option<UnitDatabase>
 {
-	let file = match File::open("/etc/yucon/units2.cfg")
+	let file = match File::open(if cfg!(target_os="linux") {"/etc/yucon/units.cfg"} else {"units.cfg"})
 	{
 		Err(err) => {
 			println!("Unable to open units.cfg: {}", err.description());

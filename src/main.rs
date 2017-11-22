@@ -10,13 +10,16 @@ use interpret::*;
 use std::env;
 use std::io::stdin;
 use std::io::stdout;
+use std::fmt::Write;
 
 static HELP_MSG: &'static str = "\
 YUCON - General Purpose Unit Converter - v0.2
 Usage:
+  yucon [options]
   yucon [options] <#> <input_unit> <output_unit>
 
-  In first form, perform conversion given on the command line
+  In first form, run an interactive session for converting units
+  In second form, perform conversion given on the command line
 
 Options:
   -s         : simple output format. value only
@@ -25,11 +28,12 @@ Options:
   --version  : show version and license info
 
 Examples:
-  $ yucon -l 1 in mm
-    1 in = 25.4 mm
+  Conversion on invoation:
+    $ yucon 1 in mm
+      25.4 mm
 
-  $ yucon 0 C F
-    32.02 F
+  Interactive session with long formatting:
+    $ yucon -l
 
 This is free software licensed under the GNU General Public License v3
 Use \'--version\' for more details
@@ -38,7 +42,7 @@ Copyright (C) 2016-2017 Blaine Murphy";
 static VERSION_MSG: &'static str = "\
 YUCON - General Purpose Unit Converter - v0.2
   Copyright (C) 2016-2017 Blaine Murphy
-  Released 18 Nov 2017
+  Released 19 Nov 2017
   Source code available at <https://github.com/kmBlaine/yucon>
   See changelog for version specific details
   License: GNU Public License v3+
@@ -53,9 +57,9 @@ details.";
 static INTERACTIVE_HELP_MSG: &'static str = "\
 Enter a conversion or a command...
 Conversions:
-  Format: <input_val> <input_unit> <output_unit>
+  Format: <#> <input_unit> <output_unit>
   
-  input_val       - value to convert. may be any valid floating point value
+  #               - value to convert. may be any valid floating point value
   input_unit      - unit being converted from
   output_unit     - unit being converted to
 
@@ -72,9 +76,19 @@ Program Variables:
   input_unit      - recall for unit being converted from
   output_unit     - recall for unit being converted to";
 
+static GREETING_MSG: &'static str = "\
+YUCON - General Purpose Unit Converter - v0.2
+====
+This is free software licensed under the GNU General Public License v3
+Type \'version\' for more details
+Copyright (C) 2016-2017 Blaine Murphy
+
+Enter a conversion or a command. Type \'help\' for assistance.
+";
+
 struct Options
 {
-	batch: bool,
+	interactive: bool,
 	format: exec::ConversionFmt,
 }
 
@@ -83,12 +97,12 @@ impl Options
 	fn new() -> Options
 	{
 		Options {
-			batch: true,
+			interactive: true,
 			format: exec::ConversionFmt::Desc,
 		}
 	}
 
-	fn get_opts() -> Result<(Options, Vec<String>), String>
+	fn get_opts() -> Result<(Options, Vec<String>), InterpretErr>
 	{
 		let mut opts = Options::new();
 		let mut extras = Vec::with_capacity(env::args().count());
@@ -107,9 +121,9 @@ impl Options
 			{
 				match arg.as_ref()
 				{
-				"--help" => return Err(HELP_MSG.to_string()),
-				"--version" => return Err(VERSION_MSG.to_string()),
-				_ => return Err("unknown option".to_string()),
+				"--help" => return Err(InterpretErr::HelpSig),
+				"--version" => return Err(InterpretErr::VersionSig),
+				_ => return Err(InterpretErr::UnknownLongOpt(arg)),
 				};
 			}
 			else if arg.starts_with("-")
@@ -125,10 +139,11 @@ impl Options
 
 					if extras.len() < 3
 					{
-						return Err("not enough args".to_string());
+						return Err(InterpretErr::IncompleteErr);
 					}
-
-					return Ok((opts, extras));
+					
+					opts.interactive = false;
+					break;
 				}
 				else
 				{
@@ -140,7 +155,7 @@ impl Options
 						{
 						's' => opts.format = exec::ConversionFmt::Short,
 						'l' => opts.format = exec::ConversionFmt::Long,
-						_ => return Err("unknown option".to_string()),
+						_ => return Err(InterpretErr::UnknownShortOpt(ch)),
 						};
 					}
 				}
@@ -156,16 +171,12 @@ impl Options
 
 				if extras.len() < 3
 				{
-					return Err("not enough args".to_string());
+					return Err(InterpretErr::IncompleteErr);
 				}
 
-				return Ok((opts, extras));
+				opts.interactive = false;
+				break;
 			}
-		}
-
-		if !opts.batch && extras.len() < 3
-		{
-			return Err("not enough args".to_string());
 		}
 
 		Ok((opts, extras))
@@ -177,6 +188,8 @@ fn line_interpreter(units: &UnitDatabase)
 	let prompt = "> ".to_string();
 	let mut interpreter: Interpreter<_, _> =
 		interpret::Interpreter::using_streams(stdin(), stdout());
+	
+	interpreter.publish(&GREETING_MSG, &None);
 	
 	loop
 	{
@@ -195,11 +208,11 @@ fn line_interpreter(units: &UnitDatabase)
 					break;
 				},
 				InterpretErr::HelpSig => {
-					interpreter.publish(&INTERACTIVE_HELP_MSG.to_string(), &None);
+					interpreter.publish(&INTERACTIVE_HELP_MSG, &None);
 					interpreter.newline();
 				},
 				InterpretErr::VersionSig => {
-					interpreter.publish(&VERSION_MSG.to_string(), &None);
+					interpreter.publish(&VERSION_MSG, &None);
 					interpreter.newline();
 				},
 				InterpretErr::CmdSuccess(..) => {
@@ -217,22 +230,38 @@ fn line_interpreter(units: &UnitDatabase)
 			Ok(toks) => toks,
 		};
 		
-		let conv_primitive = match exec::to_conv_primitive(&tokens)
+		let mut conv_primitive = match exec::to_conv_primitive(&tokens)
 		{
 			Ok(prim) => prim,
 			Err(err) => {
-				interpreter.publish(&err, &Some("Error: ".to_string()));
+				let mut mesg = String::with_capacity(80);
+				write!(mesg, "In token \'{}\': ", tokens[err.failed_at].peek());
+				interpreter.publish(&err, &Some(mesg));
 				interpreter.newline();
 				continue;
 			},
 		};
 		
-		for mut conversion in exec::convert_all(conv_primitive, units)
+		match interpreter.perform_recall(&mut conv_primitive)
+		{
+		None => {},
+		Some(err) => {
+			interpreter.publish(&err, &Some("Error: ".to_string()));
+			interpreter.newline();
+			continue;
+		},
+		};
+		
+		let mut conversions = exec::convert_all(conv_primitive, units);
+		
+		for mut conversion in &mut conversions
 		{
 			conversion.format = interpreter.format;
 			interpreter.publish(&conversion, &None);
 			interpreter.newline();
 		}
+		
+		interpreter.update_recall(&conversions);
 	}
 }
 
@@ -249,51 +278,60 @@ fn main() {
 	let (opts, mut args) = match Options::get_opts()
 	{
 		Ok(results) => results,
-		Err(msg) => {
-			println!("{}", msg);
+		Err(err) => {
+			match err
+			{
+			InterpretErr::HelpSig => println!("{}", &HELP_MSG),
+			InterpretErr::VersionSig => println!("{}", &VERSION_MSG),
+			_ => {
+				println!("Error: {}", err);
+				println!("Use \'--help \' for assistance");
+			},
+			}
 			return;
 		},
 	};
 	
-	if args.is_empty()
+	if opts.interactive
 	{
 		line_interpreter(&units);
 	}
 	else
 	{
+		let interpreter: Interpreter<_, _> =
+				interpret::Interpreter::using_streams(stdin(), stdout());
+
 		let mut args_wrapped: Vec<parse::TokenType> = Vec::with_capacity(3);
 		
-		for arg in &args
+		for arg in args.drain(..)
 		{
-			args_wrapped.push(parse::TokenType::Normal(arg.clone()));
+			args_wrapped.push(parse::TokenType::Normal(arg));
 		}
 		
 		let mut conv_primitive = match exec::to_conv_primitive(&args_wrapped)
 		{
 			Ok(results) => results,
 			Err(err) => {
-				println!("In token \'{}\': {}", args[err.failed_at], err);
+				println!("In token \'{}\': {}", args_wrapped[err.failed_at].peek(), err);
 				return;
 			},
 		};
 	
-		println!("Value recall is {}", conv_primitive.input_val.recall);
-		println!("Input unit recall is {}", conv_primitive.input_unit.recall);
-		println!("Output unit recall is {}", conv_primitive.input_unit.recall);
-	
-		if conv_primitive.input_unit.alias.is_none()
+		match interpreter.perform_recall(&mut conv_primitive)
 		{
-			conv_primitive.input_unit.alias = Some("m".to_string());
-		}
+		None => {},
+		Some(err) => {
+			println!("Error: {}", err);
+			return;
+		},
+		};
 		
-		if conv_primitive.output_unit.alias.is_none()
+		let mut conversions = exec::convert_all(conv_primitive, &units);
+		
+		for mut conversion in &mut conversions
 		{
-			conv_primitive.output_unit.alias = Some("m".to_string());
+			conversion.format = interpreter.format;
+			println!("{}", conversion);
 		}
-	
-		let mut conversion = exec::convert_all(conv_primitive, &units);
-		
-		conversion[0].format = opts.format;
-		println!("{}", conversion[0]);
 	}
 }
