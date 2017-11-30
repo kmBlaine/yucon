@@ -57,7 +57,6 @@ These include:
 * Linux
 * Windows
 
----
 ## Installation
 
 To install, follow the instructions below.
@@ -116,13 +115,58 @@ To install, follow the instructions below.
          C:\path\to\yucon> yucon
 
 
----
 ## Usage
-The following are instructions on how to use Yucon. These are intended as
-BASIC INSRUCTIONS and do not comprise the full documentation and usage of
-Yucon.
+Basic pointers on usage. This is NOT full documentation. [See the user guide at doc/UserGuide.md for full instructions on use](https://github.com/kmBlaine/yucon/tree/master/doc/UserGuide.md)
 
----
+To run:
+
+    yucon [options]
+    yucon [options] <#> <input_unit> <output_unit>
+
+In the first form, start an interactive session to use Yucon like a desktop
+calculator.
+
+In the second form, perform the conversion specified on the command line and
+immediately exit.
+
+Conversion follow a basic format:
+
+    <#> <input_unit> <output_unit>
+
+Where:
+
+- **<#>** is the value to covert
+- **<input_unit>** is the unit you know
+- **<output_unit>** is the unit you want
+
+You can recall the last value used with the semicolon **;** character:
+
+    > ; in mm
+
+You can recall the last input or output unit sed with the colo **:** character:
+
+    > 6 psi :
+
+You can actively prefix any unit with a metric prefix using the underscore **_**
+character:
+
+    > 63 gr _ug
+    4082331.33 ug
+
+Program options:
+- **-s**\
+  Simple formatting for the output. Only the number is displayed.
+
+- **-l**\
+  Long formatting for the output. Input value and unit is displayed alongside
+  the output value and unit.
+
+- **--version**\
+  Displays version and license information and then exits.
+
+- **--help**\
+  Displays simple usage instructions and then exits.
+
 ## License
 **Yucon is licensed under the GNU Public License Version 3**
 
