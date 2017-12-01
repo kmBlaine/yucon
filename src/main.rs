@@ -42,7 +42,7 @@ Copyright (C) 2016-2017 Blaine Murphy";
 static VERSION_MSG: &'static str = "\
 YUCON - General Purpose Unit Converter - v0.2
   Copyright (C) 2016-2017 Blaine Murphy
-  Released 19 Nov 2017
+  Released 01 Dec 2017
   Source code available at <https://github.com/kmBlaine/yucon>
   See changelog for version specific details
   License: GNU Public License v3+
@@ -183,12 +183,13 @@ impl Options
 	}
 }
 
-fn line_interpreter(units: &UnitDatabase)
+fn line_interpreter(units: &UnitDatabase, opts: &Options)
 {
 	let prompt = "> ".to_string();
 	let mut interpreter: Interpreter<_, _> =
 		interpret::Interpreter::using_streams(stdin(), stdout());
 	
+	interpreter.format = opts.format;
 	interpreter.publish(&GREETING_MSG, &None);
 	
 	loop
@@ -294,7 +295,7 @@ fn main() {
 	
 	if opts.interactive
 	{
-		line_interpreter(&units);
+		line_interpreter(&units, &opts);
 	}
 	else
 	{

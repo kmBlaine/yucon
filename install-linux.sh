@@ -19,9 +19,7 @@ cp ./units.cfg /etc/yucon/
 
 echo 'Copying binary...'
 
-cp ./yucon-linux /usr/bin/
-mv /usr/bin/yucon-linux /usr/bin/yucon
-chown root:root /usr/bin/yucon
+cp ./yucon /usr/bin/
 chmod 755 /usr/bin/yucon
 
 echo $'\nDone'

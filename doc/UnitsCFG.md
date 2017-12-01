@@ -15,23 +15,26 @@ simplifies the implementation, it is highly recommended that you do not.
 Before any discussion can be had about the specifics of the units.cfg file, it
 is important to understand how Yucon handles units. First off, a unit, as
 handled by Yucon, has three essential parts:
-* **A common name** ie. inch, cubic centimeter, gallon, etc
-* **A type** such as length, volume, mass, force, pressure, and so forth
+* **A common name** ie. inch, cubic centimeter, gallon, etc. This allows us to
+  identify and look up a unit in a friendly, human-readable way.
+* **A type** such as length, volume, mass, force, pressure, and so forth. This
+  prevent nonsensical conversions like volume into pressure.
 * **A conversion factor** or how many of the common reference unit composes one
-  of this unit
+  of this unit.
 
-Each of these is crucial as we must to able to identify the unit in a human
-readable way, prevent nonsensical conversions like volume into pressure, and be
-able to convert at all. The conversion factor is the magic of Yucon where by
-storing everything in common refernce unit, you can convert blindly between all
-those things with simple substitution into a predefined algebraic formula.
+The conversion factor is the magic of Yucon which avoids the combinatorial
+explosion of knowing the exact conversion ratio between every possible pair of
+units. Instead, Yucon uses a common reference unit. The conversion factor is
+the conversion ratio between the auxiliary unit and the refernce unit such that
+1 auxiliary unit equals the conversion factor reference units. Converting is
+then a simple matter of substitution into a predefined algebraic formula.
 
 In addition to these basic three elements, units may also have additional
 properties which must be considered during handling or that simply give us more
 ways to talk about that unit. Optional properties are:
 * **Aliases.** Alternate spellings or abbreviations used for the unit.
-* **Zero Point.** The point on the base unit scale that constitutes 0 on this
-  unit's scale.
+* **Zero Point.** The point on the reference unit scale that constitutes
+  zero on this unit's scale.
 * **Dimensions.** How many dimensions the unit has eg. a square meter has 2 while a
   cubic meter has 3 and a normal meter has 1
 * **Inverse.** Determines if the unit is the inverse of the base unit.
@@ -43,7 +46,7 @@ there are instances where the defaults create unexpected behavior as we will
 see.
 
 #### 1.2 - Aliases:
-sometimes spellings are not agreed upon. "Centimetre" is commonly also
+Sometimes spellings are not agreed upon. "Centimetre" is commonly also
 spelled "centimeter" with the r and e transposed. As either is correct 
 depending on where you live, it would be nice if you could use whatever you
 are used to. Aliasing units allows for this. Also, who wants to type
@@ -55,28 +58,30 @@ would be nice if it just knew that if we are in the US, "gallon" means
 Gallon therefore must have unique names to disambiguate ie "gal-us" or "gal-uk".
 
 #### 1.3 - Zero Point:
-In most cases 0 units is 0 base units; 0 inches is the same length
-0 centimeters. Temperature is the notable exception to this rule where 32F is
-equal to 0C and 0K is equal to -273.2C and -459.6F and thus we need to know
-where our scales meet.
+In most cases 0 units is 0 reference units; 0 inches is the same length
+0 centimeters, 0 gallons is the same volume as 0 litres and so on. Temperature
+is the notable exception to this rule; 0 F is **NOT** 0C. In fact its actually
+somewhere around -17.8 C. The zero point tells us where zero for this unit is on
+the reference unit's scale.
 
-**Ex.** Yucon uses Kelvin as the base temperature unit. Lets see how Fahrenheit
+**Ex.** Yucon uses Kelvin as the reference temperature unit. Lets see how Fahrenheit
 and Celcius are defined:
     
     [celcius]
     aliases     = C
     type        = temperature
-    conv_factor = 1                 # C and K have the same step size but define 0 differently
-    zero_point  = 273.15            # 0C is equivalent to 273.15K
+    conv_factor = 1           # Celcius and Kelvin have the same step size
+    zero_point  = 273.15      # but 0 C is actually 273.15 K
     
     [fahrenheit]
     aliases     = F
     type        = temperature
-    conv_factor = 0.555555555555556 # 1 step on the F scale is 0.555555555555556 steps on the K scale
-    zero_point  = 255.361           # 0F is equivalent to 255.361K
+    conv_factor = 0.555555555555556   # Fahrenheit is 5/9 of a degree Kelvin
+    zero_point  = 255.372222222222222 # and 0 F is 255.372 K
+    tags        = us,uk
 
 #### 1.4 - Dimensions:
-most units are one-dimensional meaning that when a metric
+Most units are one-dimensional meaning that when a metric
 prefix is applied, it scales in direct proportion to the prefix; 1 mL is
 1/1000th of a litre. However, square and cubic units do not obey this wisdom;
 1 cubic centimeter is actually 1/1,000,000th of 1 cubic meter. This is because
@@ -89,15 +94,17 @@ respectively as we see in the above example. As a rule of thumb, just the ones
 that have "square" or "cubic" in the name need dimensioning.
 
 #### 1.5 - Inverse:
-Most units have exactly the same composition as the base unit, meaning
-that when broken down into their composing elements, they look the same; a mile
-per hour is a distance per time, same as a meter per second. However,
-some units have the same composition and thus may be easily converted, but are
-exact inverses of each other. For example, frequency is just the inverse of
-time; 10 Hz is 0.1 seconds. Fuel economy is another good example of this; a
-mile per gallon is a volume per distance while a litre per 100km is a distance
-per volume. Still easy to convert between but we have to be cautious to inform
-Yucon of when a unit is the inverse of the base unit.
+Most units have the same exact conceptual dimension as the reference unit. For
+instance, all pressure units are a force per area. Some unit types are less
+strictly specified however, such as fuel economy. Fuel economy is sometimes
+measured as distance travelled per unit of fuel consumed and other times it is
+measured as fuel consumed per distance travelled. You might note that these are
+the same metrics but they are simply inverted. Thus it is easy to convert between
+say L/100km and MPG but one or the other must be inverted before Yucon can apply
+the conversion factor. In this case, it would be MPG since Yucon uses L/100km as
+the reference unit for fuel economies. If a unit is the inverse of the reference
+unit, like MPG is relative to L/100km, you must inform Yucon of this so it can
+perform the conversion properly.
 
 ### 2 - General Syntax and Formatting:
 The units.cfg file essentially uses INI syntax and format which is simple,
@@ -148,14 +155,14 @@ from defacto INI, so please consider the following:
      
      > But what if I want to use leading and trailing whitespace in something?
      
-     This scenario has been considered and suffice it to say, its hard to imagine
-     any situation where this would be applicable. Such a feature would be
-     brain-damaged.
+     This scenario has been considered and dismissed; such a feature is not and probably will
+     not be implemented. Suffice it to say, its hard to imagine any situation
+     where it would really be applicable.
    * It is frowned upon if DOS/Windows style line endings are used because as 
      everyone with an ounce of sense knows, you only need ONE character to
      terminate a line and that character is newline (LF, '\\n').
    * On that last note it is outright FORBIDDEN to edit this file with
-     Notepad.exe. Get a real text editor like Notepad++.
+     Notepad.exe. Atom, Notepad++, Sublime - they're out there. Just saying.
 4. This file is case sensitive and favors lower case.
 
 ### 3 - Unit Declaration Syntax

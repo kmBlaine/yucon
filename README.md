@@ -62,7 +62,7 @@ These include:
 To install, follow the instructions below.
 
 ### For Linux users:
-1. Download the 'yucon_v[version#].zip' file (where [version#] is the current
+1. Download the 'yucon_v[version#].tar.gz' file (where [version#] is the current
    version or whichever version you want) from the Releases page:
    https://github.com/kmBlaine/yucon/releases/
 
@@ -70,18 +70,14 @@ To install, follow the instructions below.
    'yucon_v[version#]' folder.
 
        $ cd /path/to/yucon_v[version#].zip
-       $ unzip yucon_v[version#].zip
+       $ tar -xzf yucon_v[version#].tar.gz
        $ cd yucon_v[version#]
 
-3. Set the execute permission on the installer script.
-
-       $ chmod 755 install-linux.sh
-
-4. Run 'install-linux.sh' as root:
+3. Run 'install-linux.sh' as root:
 
        $ sudo ./install-linux.sh
 
-5. Your finished! Type 'yucon' in your terminal to start using.
+4. Your finished! Type 'yucon' in your terminal to start using.
 
 ### For Windows users:
 1. Download the 'yucon_v[version#].zip' file (where [version#] is the current
@@ -97,15 +93,13 @@ To install, follow the instructions below.
        C:\Users\[your username]\Desktop\yucon\
        C:\Users\[your username]\yucon\
 
-4. Copy the 'yucon-windows.exe' file in the 'yucon_v[version#]' folder into
+4. Copy the 'yucon.exe' file in the 'yucon_v[version#]' folder into
    the folder you just created.
 
-5. Rename 'yucon-windows.exe' to 'yucon.exe'
-
-6. Copy the 'units.cfg' file in the 'yucon_v[version#]' folder into the same
+5. Copy the 'units.cfg' file in the 'yucon_v[version#]' folder into the same
    folder as yucon.exe.
 
-7. Your finished! Simply double-click 'yucon.exe' to start using.
+6. Your finished! Simply double-click 'yucon.exe' to start using.
    * OR open a command prompt or Powershell session cd to where you copied Yucon to:
 
          C:\Users\John Doe\> cd path\to\yucon\
@@ -117,6 +111,7 @@ To install, follow the instructions below.
 
 ## Usage
 Basic pointers on usage. This is NOT full documentation. [See the user guide at doc/UserGuide.md for full instructions on use](https://github.com/kmBlaine/yucon/tree/master/doc/UserGuide.md)
+If you would like to add new units to your Yucon install, [see the units.cfg guide at doc/UnitsCFG.md for instructions](https://github.com/kmBlaine/yucon/tree/master/doc/UnitsCFG.md)
 
 To run:
 

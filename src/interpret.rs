@@ -141,7 +141,7 @@ impl SyntaxChecker for LineCheck
 	}
 	fn is_comment(&self, ch: char) -> bool
 	{
-		ch == '#' || ch == '\n'
+		ch == '#' || ch == '\n' || ch == '\r'
 	}
 	fn is_delim(&self, ch: char) -> bool
 	{
