@@ -5,7 +5,6 @@ file. Of course for these new units to be understood by the program, they must
 obey a certain syntax.
 
 ## The units.cfg File
----
 The units.cfg file contains all of the unit declarations for Yucon, which
 includes the standard units that it ships with and any user-defined units which
 they add themselves. Although Yucon allows you to edit the default units which
@@ -60,7 +59,7 @@ Gallon therefore must have unique names to disambiguate ie "gal-us" or "gal-uk".
 #### 1.3 - Zero Point:
 In most cases 0 units is 0 reference units; 0 inches is the same length
 0 centimeters, 0 gallons is the same volume as 0 litres and so on. Temperature
-is the notable exception to this rule; 0 F is **NOT** 0C. In fact its actually
+is the notable exception to this rule; 0 F is **NOT** 0 C. In fact its actually
 somewhere around -17.8 C. The zero point tells us where zero for this unit is on
 the reference unit's scale.
 

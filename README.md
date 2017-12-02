@@ -69,7 +69,7 @@ To install, follow the instructions below.
 2. Open up a terminal session, unzip the files, and 'cd' into the
    'yucon_v[version#]' folder.
 
-       $ cd /path/to/yucon_v[version#].zip
+       $ cd /path/to/yucon_v[version#].tar.gz
        $ tar -xzf yucon_v[version#].tar.gz
        $ cd yucon_v[version#]
 

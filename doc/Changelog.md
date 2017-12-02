@@ -2,8 +2,8 @@
 Version history of Yucon.
 
 ## Beta Releases
+These are versions where the program is still in heavy development.
 
----
 ### **v0.2**
 Complete rewrite in the Rust programming language. Released xx Nov 2017
 
