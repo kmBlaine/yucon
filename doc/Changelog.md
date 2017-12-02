@@ -4,8 +4,15 @@ Version history of Yucon.
 ## Beta Releases
 These are versions where the program is still in heavy development.
 
+### **v0.2.1**
+Hotfix. Released 02 Dec 2017
+
+#### Fixes:
+* Fixed single use mode ignoring command line format options
+
+---
 ### **v0.2**
-Complete rewrite in the Rust programming language. Released xx Nov 2017
+Complete rewrite in the Rust programming language. Released 01 Dec 2017
 
 #### Summary
 The C lang version was more of a hack than a well-designed application. A rewrite

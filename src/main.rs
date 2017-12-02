@@ -29,7 +29,7 @@ use std::io::stdout;
 use std::fmt::Write;
 
 static HELP_MSG: &'static str = "\
-YUCON - General Purpose Unit Converter - v0.2
+YUCON - General Purpose Unit Converter - v0.2.1
 Usage:
   yucon [options]
   yucon [options] <#> <input_unit> <output_unit>
@@ -56,11 +56,11 @@ Use \'--version\' for more details
 Copyright (C) 2016-2017 Blaine Murphy";
 
 static VERSION_MSG: &'static str = "\
-YUCON - General Purpose Unit Converter - v0.2
+YUCON - General Purpose Unit Converter - v0.2.1
   Copyright (C) 2016-2017 Blaine Murphy
-  Released 01 Dec 2017
+  Released 02 Dec 2017
   Source code available at <https://github.com/kmBlaine/yucon>
-  See changelog for version specific details
+  See doc/Changelog.md for version specific details
   License: GNU Public License v3+
 
 This program is free software: you can redistribute it and/or modify it under

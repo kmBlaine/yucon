@@ -110,8 +110,9 @@ To install, follow the instructions below.
 
 
 ## Usage
-Basic pointers on usage. This is NOT full documentation. [See the user guide at doc/UserGuide.md for full instructions on use](https://github.com/kmBlaine/yucon/tree/master/doc/UserGuide.md)
-If you would like to add new units to your Yucon install, [see the units.cfg guide at doc/UnitsCFG.md for instructions](https://github.com/kmBlaine/yucon/tree/master/doc/UnitsCFG.md)
+Basic pointers on usage. This is NOT full documentation. [See the user guide at doc/UserGuide.md for full instructions on use.](https://github.com/kmBlaine/yucon/tree/master/doc/UserGuide.md)
+
+If you would like to add new units to your Yucon install, [see the units.cfg guide at doc/UnitsCFG.md for instructions.](https://github.com/kmBlaine/yucon/tree/master/doc/UnitsCFG.md)
 
 To run:
 
