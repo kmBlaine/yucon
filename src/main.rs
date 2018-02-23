@@ -1,4 +1,4 @@
-/* 
+/*
  * Yucon - General Purpose Unit Converter
  * Copyright (C) 2016-2017  Blaine Murphy
  *
@@ -9,7 +9,7 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -28,8 +28,13 @@ use std::io::stdin;
 use std::io::stdout;
 use std::fmt::Write;
 
+static PROGRAM_NAME: &'static str = "\
+YUCON - General Purpose Unit Converter - v0.2.2";
+
+static COPYRIGHT_MSG: &'static str = "\
+Copyright (C) 2016-2018 Blaine Murphy";
+
 static HELP_MSG: &'static str = "\
-YUCON - General Purpose Unit Converter - v0.2.1
 Usage:
   yucon [options]
   yucon [options] <#> <input_unit> <output_unit>
@@ -44,7 +49,7 @@ Options:
   --version  : show version and license info
 
 Examples:
-  Conversion on invoation:
+  Conversion on invocation:
     $ yucon 1 in mm
       25.4 mm
 
@@ -52,13 +57,10 @@ Examples:
     $ yucon -l
 
 This is free software licensed under the GNU General Public License v3
-Use \'--version\' for more details
-Copyright (C) 2016-2017 Blaine Murphy";
+Use \'--version\' for more details";
 
 static VERSION_MSG: &'static str = "\
-YUCON - General Purpose Unit Converter - v0.2.1
-  Copyright (C) 2016-2017 Blaine Murphy
-  Released 02 Dec 2017
+\0  Released 23 Feb 2018
   Source code available at <https://github.com/kmBlaine/yucon>
   See doc/Changelog.md for version specific details
   License: GNU Public License v3+
@@ -68,13 +70,14 @@ the terms of GPLv3 or any later version. You should have recieved a copy along
 with this program. If not, see <https://gnu.org/licenses/gpl.html>.
 
 There is NO WARRANTY, to the extent permitted by law. See license for more
-details.";
+details.
+";
 
 static INTERACTIVE_HELP_MSG: &'static str = "\
 Enter a conversion or a command...
 Conversions:
   Format: <#> <input_unit> <output_unit>
-  
+
   #               - value to convert. may be any valid floating point value
   input_unit      - unit being converted from
   output_unit     - unit being converted to
@@ -93,14 +96,9 @@ Program Variables:
   output_unit     - recall for unit being converted to";
 
 static GREETING_MSG: &'static str = "\
-YUCON - General Purpose Unit Converter - v0.2
 ====
 This is free software licensed under the GNU General Public License v3
-Type \'version\' for more details
-Copyright (C) 2016-2017 Blaine Murphy
-
-Enter a conversion or a command. Type \'help\' for assistance.
-";
+Type \'version\' for more details";
 
 struct Options
 {
@@ -157,7 +155,7 @@ impl Options
 					{
 						return Err(InterpretErr::IncompleteErr);
 					}
-					
+
 					opts.interactive = false;
 					break;
 				}
@@ -204,10 +202,17 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
 	let prompt = "> ".to_string();
 	let mut interpreter: Interpreter<_, _> =
 		interpret::Interpreter::using_streams(stdin(), stdout());
-	
+
 	interpreter.format = opts.format;
+	interpreter.publish(&PROGRAM_NAME, &None);
+	interpreter.newline();
 	interpreter.publish(&GREETING_MSG, &None);
-	
+	interpreter.newline();
+	interpreter.publish(&COPYRIGHT_MSG, &None);
+	interpreter.newline();
+	interpreter.newline();
+	interpreter.publish(&"Enter a conversion or a command. Type \'help\' for assistance.", &None);
+
 	loop
 	{
 		interpreter.newline();
@@ -229,7 +234,11 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
 					interpreter.newline();
 				},
 				InterpretErr::VersionSig => {
+					interpreter.publish(&PROGRAM_NAME, &None);
+					interpreter.newline();
 					interpreter.publish(&VERSION_MSG, &None);
+					interpreter.newline();
+					interpreter.publish(&COPYRIGHT_MSG, &None);
 					interpreter.newline();
 				},
 				InterpretErr::CmdSuccess(..) => {
@@ -241,12 +250,12 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
 					interpreter.newline();
 				},
 				};
-				
+
 				continue;
 			},
 			Ok(toks) => toks,
 		};
-		
+
 		let mut conv_primitive = match exec::to_conv_primitive(&tokens)
 		{
 			Ok(prim) => prim,
@@ -258,7 +267,7 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
 				continue;
 			},
 		};
-		
+
 		match interpreter.perform_recall(&mut conv_primitive)
 		{
 		None => {},
@@ -268,16 +277,16 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
 			continue;
 		},
 		};
-		
+
 		let mut conversions = exec::convert_all(conv_primitive, units);
-		
+
 		for mut conversion in &mut conversions
 		{
 			conversion.format = interpreter.format;
 			interpreter.publish(&conversion, &None);
 			interpreter.newline();
 		}
-		
+
 		interpreter.update_recall(&conversions);
 	}
 }
@@ -298,8 +307,16 @@ fn main() {
 		Err(err) => {
 			match err
 			{
-			InterpretErr::HelpSig => println!("{}", &HELP_MSG),
-			InterpretErr::VersionSig => println!("{}", &VERSION_MSG),
+			InterpretErr::HelpSig => {
+				println!("{}", &PROGRAM_NAME);
+				println!("{}", &HELP_MSG);
+				println!("{}", &COPYRIGHT_MSG);
+			},
+			InterpretErr::VersionSig => {
+				println!("{}", &PROGRAM_NAME);
+				println!("{}", &VERSION_MSG);
+				println!("{}", &COPYRIGHT_MSG);
+			},
 			_ => {
 				println!("Error: {}", err);
 				println!("Use \'--help \' for assistance");
@@ -308,7 +325,7 @@ fn main() {
 			return;
 		},
 	};
-	
+
 	if opts.interactive
 	{
 		line_interpreter(&units, &opts);
@@ -317,15 +334,15 @@ fn main() {
 	{
 		let mut interpreter: Interpreter<_, _> =
 				interpret::Interpreter::using_streams(stdin(), stdout());
-		
+
 		interpreter.format = opts.format;
 		let mut args_wrapped: Vec<parse::TokenType> = Vec::with_capacity(3);
-		
+
 		for arg in args.drain(..)
 		{
 			args_wrapped.push(parse::TokenType::Normal(arg));
 		}
-		
+
 		let mut conv_primitive = match exec::to_conv_primitive(&args_wrapped)
 		{
 			Ok(results) => results,
@@ -334,7 +351,7 @@ fn main() {
 				return;
 			},
 		};
-	
+
 		match interpreter.perform_recall(&mut conv_primitive)
 		{
 		None => {},
@@ -343,9 +360,9 @@ fn main() {
 			return;
 		},
 		};
-		
+
 		let mut conversions = exec::convert_all(conv_primitive, &units);
-		
+
 		for mut conversion in &mut conversions
 		{
 			conversion.format = interpreter.format;

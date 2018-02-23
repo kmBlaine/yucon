@@ -2,9 +2,9 @@
  * ===
  * Contains the functions for reading the units.cfg file and compiling it into the units
  * database.
- * 
+ *
  * This file is part of:
- * 
+ *
  * Yucon - General Purpose Unit Converter
  * Copyright (C) 2016-2017  Blaine Murphy
  *
@@ -15,7 +15,7 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -37,16 +37,17 @@ use ::unit::*;
 use std::rc;
 use std::rc::Rc;
 use std::num::ParseFloatError;
+use std::env;
 
 
 /* enum ParsePropertyError
- * 
+ *
  * Description: ParsePropertyError is an error sum type for use when parsing
  *   the units.cfg file. The errors it encompasses are:
- *     
+ *
  *     - SyntaxError: returned when a line violates syntax rules. (see syntax
  *         rules for units.cfg)
- *     
+ *
  *     - NoSuchProperty: returned when the key in a key-value pair does not
  *         match any known unit properties
  *
@@ -102,7 +103,7 @@ impl Error for ParsePropertyError
 		ParsePropertyError::InvalidField(ref err)   => err.description(),
 		}
 	}
-	
+
 	fn cause(&self) -> Option<&Error>
 	{
 		match *self
@@ -146,7 +147,7 @@ impl From<SyntaxError> for ParsePropertyError
 // END ParsePropertyError
 
 /* enum UnitProperty
- * 
+ *
  * Description: sum type for describing the properties of units. used to make
  *   conveniently representable as computer-friendly object code, allowing
  *   easy analysis and return values for functions. See Yucon docs for more
@@ -230,11 +231,11 @@ struct UnitPropertyCheck<'a>
 	state: PropCheckState,
 	valid: bool,
 }
- 
+
 impl<'a> UnitPropertyCheck<'a>
 {
 	/* Creates and returns new syntax checker for the given line.
-	 * 
+	 *
 	 * Parameters:
 	 *   - from_line : line of text to be checked
 	 */
@@ -246,7 +247,7 @@ impl<'a> UnitPropertyCheck<'a>
 		                    state:   PropCheckState::Key,
 		                    valid:   true }
 	}
-	
+
 	/* Checks if the given delimiter was expected. Returns Ok(true) if it was
 	 * or a SyntaxError if it was not. Conceptually just a finite state machine.
 	 *
@@ -264,7 +265,7 @@ impl<'a> UnitPropertyCheck<'a>
 				self.state = PropCheckState::CommonName;
 			}
 			else
-			{ 
+			{
 				self.valid = false;
 				return false;
 			}
@@ -318,10 +319,10 @@ impl<'a> UnitPropertyCheck<'a>
 			panic!("syntax check reached impossible state");
 		}
 		};
-		
+
 		true
 	}
-	
+
 	/* Checks if the given token was expected. Returns Ok(true) if it was
 	 * or a SyntaxError if it was not. Conceptually just a finite state machine.
 	 *
@@ -380,7 +381,7 @@ impl<'a> UnitPropertyCheck<'a>
 			panic!("syntax check reached impossible state");
 		},
 		};
-		
+
 		true
 	}
 }
@@ -399,7 +400,7 @@ impl<'a> SyntaxChecker for UnitPropertyCheck<'a>
 			self.check_normal(token, index)
 		}
 	}
-	
+
 	fn assert_valid(&self, index: usize, more_tokens: bool) -> Result<(), SyntaxError>
 	{
 		// the following states are both invalid exit states and possible error states
@@ -419,7 +420,7 @@ impl<'a> SyntaxChecker for UnitPropertyCheck<'a>
 			_ => (), // all others may not meet criteria. do nothing
 			};
 		}
-		
+
 		// the following are valid exit states but may still be error states
 		if !self.valid
 		{
@@ -437,20 +438,20 @@ impl<'a> SyntaxChecker for UnitPropertyCheck<'a>
 			_ => (), // Key and Value states are always okay to exit on. Just do nothing
 			};
 		}
-		
+
 		Ok(())
 	}
-	
+
 	fn is_esc(&self, ch: char) -> bool
 	{
 		ch == '\\'
 	}
-	
+
 	fn is_comment(&self, ch: char) -> bool
 	{
 		ch == '#'
 	}
-	
+
 	fn is_delim(&self, ch: char) -> bool
 	{
 		ch == '[' ||
@@ -458,32 +459,32 @@ impl<'a> SyntaxChecker for UnitPropertyCheck<'a>
 		ch == ',' ||
 		ch == '='
 	}
-	
+
 	fn is_preserved_delim(&self, ch: char) -> bool
 	{
 		false
 	}
-	
+
 	fn esc_char(&self) -> char
 	{
 		'\\'
 	}
-	
+
 	fn valid(&self) -> bool
 	{
 		self.valid
 	}
-	
+
 	fn esc_set(&self) -> bool
 	{
 		self.esc_set
 	}
-	
+
 	fn set_esc(&mut self, set: bool)
 	{
 		self.esc_set = set;
 	}
-	
+
 	fn reset(&mut self)
 	{
 		self.valid = true;
@@ -503,7 +504,7 @@ fn get_unit_type(requested_type: String) -> Result<&'static str, ParsePropertyEr
 {
 	{ // scope to avoid borrow problem when handing string to NoSuchType error
 	let user_type = requested_type.as_str();
-	
+
 	for unit_type in unit::UNIT_TYPES.iter()
 	{
 		if *unit_type == user_type
@@ -512,11 +513,11 @@ fn get_unit_type(requested_type: String) -> Result<&'static str, ParsePropertyEr
 		}
 	}
 	} // end borrow scope
-	
+
 	Err(ParsePropertyError::NoSuchType(requested_type))
 }
 
-/* Parses value part of a key-value pair as a number. Helper function for 
+/* Parses value part of a key-value pair as a number. Helper function for
  * fn parse_key_value to avoid duplicate code. Returns (bool, f64) tuple
  * if the field was empty or a valid number, InvalidField error otherwise.
  * The bool part of the return is false if the field was not empty / valid
@@ -533,9 +534,9 @@ fn field_as_num(field: Option<TokenType>) -> Result<(bool, f64), ParsePropertyEr
 		None      => return Ok((true, ::std::f64::NAN)),
 		Some(val) => val,
 	};
-	
+
 	let value = try!(token.unwrap().parse::<f64>());
-	
+
 	Ok((false, value))
 }
 
@@ -556,12 +557,12 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 	let mut tokens_iter = tokens.drain(..);
 	let mut field_empty = true;
 	let key = tokens_iter.next().unwrap().unwrap();
-	
+
 	let unit_property = match key.as_str()
 	{
 	"aliases" => {
 		let mut aliases = Vec::new();
-		
+
 		for token in tokens_iter
 		{
 			match token
@@ -573,7 +574,7 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 			_ => (),
 			};
 		}
-		
+
 		UnitProperty::Aliases(aliases)
 	},
 	"conv_factor" => {
@@ -617,7 +618,7 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 	}
 	"type" => {
 		tokens_iter.next();
-		
+
 		let unit_type = match tokens_iter.next()
 		{
 			None      => unit::UNIT_TYPES[0], // technically an error but this will be caught later by the empty field check
@@ -626,7 +627,7 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 				try!(get_unit_type(val.unwrap()))
 			},
 		};
-		
+
 		UnitProperty::UnitType(unit_type)
 	},
 	"zero_point" => {
@@ -637,12 +638,12 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 	},
 	_ => return Err(ParsePropertyError::NoSuchProperty(key)),
 	};
-	
+
 	if field_empty
 	{
 		return Err(ParsePropertyError::EmptyField(key));
 	}
-	
+
 	Ok(unit_property)
 }
 
@@ -650,7 +651,7 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
  * wrapped in a UnitProperty. Returns EmptyField if the common name is not given
  * Helper function for fn parse_line to separate out semantic analysis and avoid
  * a code glut.
- * 
+ *
  * Parameters:
  *   - tokens : vector of TokenType wrapped tokens. this vector is expected to
  *              have empty tokens filtered out and to have common name syntax
@@ -660,15 +661,15 @@ fn parse_common_name(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParsePr
 {
 	// after filtering, the common name field should have exactly 3 tokens
 	// '[', 'name', ']' less or more and we have a problem
-	if tokens.len() != 3 
+	if tokens.len() != 3
 	{
 		return Err(ParsePropertyError::EmptyField("common name".to_string()));
 	}
-	
+
 	let mut tokens_iter = tokens.drain(..);
 	tokens_iter.next();
 	let common_name = tokens_iter.next().unwrap().unwrap();
-	
+
 	Ok(UnitProperty::CommonName(common_name))
 }
 
@@ -686,10 +687,10 @@ fn parse_common_name(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParsePr
  *   - Dimensions         : "dimensions = 3"
  *   - Inverse            : "inverse = 1"
  *   - Zero Point         : "zero_point = 1.234e5"
- * 
+ *
  * These are only basic examples. See "doc/UnitsCFG_Explained.md" for
  * full units.cfg syntax and semantics specification .
- * 
+ *
  * Parameters:
  *   - line : line of input to parse
  */
@@ -698,7 +699,7 @@ fn parse_line(line: &str) -> Result<Option<UnitProperty>, ParsePropertyError>
 	let mut syntax_check = UnitPropertyCheck::new(line);
 	let mut raw_tokens = try!(tokenize(line, &mut syntax_check));
 	let mut tokens: Vec<TokenType> = Vec::with_capacity(raw_tokens.len());
-	
+
 	for raw_tok in raw_tokens.drain(..)
 	{
 		let new_tok = match raw_tok
@@ -710,25 +711,25 @@ fn parse_line(line: &str) -> Result<Option<UnitProperty>, ParsePropertyError>
 			TokenType::Normal(tok.trim().to_string())
 		},
 		};
-		
+
 		if new_tok.is_empty()
 		{
 			continue;
 		}
-		
+
 		tokens.push(new_tok);
 	}
-	
+
 	// if line was whitespace or comment
 	// fn tokenize ensures at least one empty token for blank or comment lines
 	if tokens.len() == 0 // tokens.len() == 1 && tokens[0].is_empty()
 	{
 		return Ok(None);
 	}
-	
+
 	// tokens.retain(|tok| !tok.is_empty());
 	let mut common_name = true;
-	
+
 	match tokens[0]
 	{
 	TokenType::Delim(ref tok) => {
@@ -745,7 +746,7 @@ fn parse_line(line: &str) -> Result<Option<UnitProperty>, ParsePropertyError>
 	},
 	TokenType::Normal(_) => common_name = false,
 	};
-	
+
 	let unit_property = if common_name
 	{
 		try!(parse_common_name(tokens))
@@ -754,7 +755,7 @@ fn parse_line(line: &str) -> Result<Option<UnitProperty>, ParsePropertyError>
 	{
 		try!(parse_key_value(tokens))
 	};
-	
+
 	Ok(Some(unit_property))
 }
 
@@ -776,10 +777,49 @@ fn add_unit(database: &mut UnitDatabase, new_unit: Unit, aliases: &Vec<Rc<String
 		          new_unit.common_name);
 	}
 }
+fn find_and_make_cfg() -> io::Result<File>
+{
+	let (default_path, path_sepr) = if cfg!(target_os="linux")
+	{
+		("/etc/yucon/units.cfg", "/")
+	}
+	else
+	{
+		(r"C:\Program Files\Yucon\units.cfg", r"\")
+	};
+
+	let mut home_path = match env::home_dir()
+	{
+		Some(path) => {
+			path
+		},
+		None => {
+			return File::open(default_path);
+		},
+	};
+
+	let mut home_cfg = home_path.clone();
+	home_cfg.push(".yucon");
+	home_cfg.push("units.cfg");
+
+	match File::open(&home_cfg)
+	{
+		Err(err) => {
+			let default_file = try!(File::open(&default_path));
+			home_path.push(".yucon");
+			try!(fs::create_dir(home_path));
+			try!(fs::copy(&default_path, &home_cfg));
+			Ok(default_file)
+		},
+		Ok(file) => {
+			Ok(file)
+		},
+	}
+}
 
 pub fn load_units_list() -> Option<UnitDatabase>
 {
-	let file = match File::open(if cfg!(target_os="linux") {"/etc/yucon/units.cfg"} else {"units.cfg"})
+	let file = match find_and_make_cfg()
 	{
 		Err(err) => {
 			println!("Unable to open units.cfg: {}", err.description());
@@ -792,7 +832,7 @@ pub fn load_units_list() -> Option<UnitDatabase>
 	let mut line = String::with_capacity(80); // standard terminal width. all lines in stock units.cfg will fit in this.
 	let mut line_num = -1;
 	let mut first_unit = true;
-	
+
 	let mut units_database = UnitDatabase::new();
 	let mut new_unit = Unit::new();
 	let mut aliases: Vec<Rc<String>> = Vec::new();
@@ -850,13 +890,13 @@ pub fn load_units_list() -> Option<UnitDatabase>
 				      {}\n", line_num, line.trim_right(), err );
 		},
 		};
-	
+
 		line.clear();
 	}
 
 	// units added when a new section begins
 	// last unit in file will not be added without this
 	add_unit(&mut units_database, new_unit, &aliases);
-	
+
 	Some(units_database)
 }
