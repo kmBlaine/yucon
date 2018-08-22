@@ -29,41 +29,41 @@ use std::fmt::Display;
 #[derive(Debug)]
 pub enum SyntaxError
 {
-	Expected(usize, String),
-	BadEscSeq(usize, char),
+    Expected(usize, String),
+    BadEscSeq(usize, char),
 }
 
 impl Error for SyntaxError
 {
-	fn description(&self) -> &str
-	{
-		match *self
-		{
-		SyntaxError::Expected(..) => "expected different token",
-		SyntaxError::BadEscSeq(..) => "reached bad escape sequence",
-		}
-	}
-	
-	fn cause(&self) -> Option<&Error>
-	{
-		None
-	}
+    fn description(&self) -> &str
+    {
+        match *self
+        {
+        SyntaxError::Expected(..) => "expected different token",
+        SyntaxError::BadEscSeq(..) => "reached bad escape sequence",
+        }
+    }
+    
+    fn cause(&self) -> Option<&Error>
+    {
+        None
+    }
 }
 
 impl Display for SyntaxError
 {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result
-	{
-		match *self
-		{
-		SyntaxError::Expected(ref index, ref msg) => {
-			write!(f, "syntax error @ col {}: expected {}", index+1, msg)
-		},
-		SyntaxError::BadEscSeq(ref index, ref ch) => {
-			write!(f, "syntax error @ col {}: bad escape sequence: \\{}", index+1, ch)
-		},
-		}
-	}
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result
+    {
+        match *self
+        {
+        SyntaxError::Expected(ref index, ref msg) => {
+            write!(f, "syntax error @ col {}: expected {}", index+1, msg)
+        },
+        SyntaxError::BadEscSeq(ref index, ref ch) => {
+            write!(f, "syntax error @ col {}: bad escape sequence: \\{}", index+1, ch)
+        },
+        }
+    }
 }
 
 /* trait SyntaxChecker
@@ -134,17 +134,17 @@ impl Display for SyntaxError
  */
 pub trait SyntaxChecker
 {
-	fn feed_token(&mut self, token: &str, delim: bool, index: usize) -> bool;
-	fn is_esc(&self, ch: char) -> bool;
-	fn is_comment(&self, ch: char) -> bool;
-	fn is_delim(&self, ch: char) -> bool;
-	fn is_preserved_delim(&self, ch: char) -> bool;
-	fn esc_char(&self) -> char;
-	fn valid(&self) -> bool;
-	fn assert_valid(&self, index: usize, more_tokens: bool) -> Result<(), SyntaxError>;
-	fn esc_set(&self) -> bool;
-	fn set_esc(&mut self, set: bool);
-	fn reset(&mut self);
+    fn feed_token(&mut self, token: &str, delim: bool, index: usize) -> bool;
+    fn is_esc(&self, ch: char) -> bool;
+    fn is_comment(&self, ch: char) -> bool;
+    fn is_delim(&self, ch: char) -> bool;
+    fn is_preserved_delim(&self, ch: char) -> bool;
+    fn esc_char(&self) -> char;
+    fn valid(&self) -> bool;
+    fn assert_valid(&self, index: usize, more_tokens: bool) -> Result<(), SyntaxError>;
+    fn esc_set(&self) -> bool;
+    fn set_esc(&mut self, set: bool);
+    fn reset(&mut self);
 }
 
 const DELIM: bool = true; // constant for indicated delimiter to SyntaxChecker trait
@@ -166,44 +166,44 @@ const DELIM: bool = true; // constant for indicated delimiter to SyntaxChecker t
 #[derive(Debug)]
 pub enum TokenType
 {
-	Delim (String),
-	Normal(String),
+    Delim (String),
+    Normal(String),
 }
 
 impl TokenType
 {
-	// Conveniently unwraps the contained string so redundant match lookups are
-	// eliminated.
-	pub fn unwrap(self) -> String
-	{
-		match self
-		{
-			TokenType::Delim(tok)  => return tok,
-			TokenType::Normal(tok) => return tok,
-		}
-	}
-	
-	// Peeks at the wrapped value. Returns reference to String for convenience
-	// when working with borrowed TokenTypes
-	pub fn peek(&self) -> &String
-	{
-		match *self
-		{
-		TokenType::Delim(ref tok) => tok,
-		TokenType::Normal(ref tok) => tok,
-		}
-	}
-	
-	// Checks if the contained string is empty so that unwrapping is not
-	// necessary
-	pub fn is_empty(&self) -> bool
-	{
-		match *self
-		{
-			TokenType::Delim(ref tok)  => return tok.is_empty(),
-			TokenType::Normal(ref tok) => return tok.is_empty(),
-		}
-	}
+    // Conveniently unwraps the contained string so redundant match lookups are
+    // eliminated.
+    pub fn unwrap(self) -> String
+    {
+        match self
+        {
+            TokenType::Delim(tok)  => return tok,
+            TokenType::Normal(tok) => return tok,
+        }
+    }
+    
+    // Peeks at the wrapped value. Returns reference to String for convenience
+    // when working with borrowed TokenTypes
+    pub fn peek(&self) -> &String
+    {
+        match *self
+        {
+        TokenType::Delim(ref tok) => tok,
+        TokenType::Normal(ref tok) => tok,
+        }
+    }
+    
+    // Checks if the contained string is empty so that unwrapping is not
+    // necessary
+    pub fn is_empty(&self) -> bool
+    {
+        match *self
+        {
+            TokenType::Delim(ref tok)  => return tok.is_empty(),
+            TokenType::Normal(ref tok) => return tok.is_empty(),
+        }
+    }
 }
 /* Attemtps to tokenizes a line according to the syntax described by 'checker'.
  * If the line's syntax is valid, a vector of TokenType wrapped strings will be
@@ -225,118 +225,118 @@ impl TokenType
  */
 pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<TokenType>, SyntaxError>
 {
-	if line.is_empty()
-	{
-		let mut tokens = Vec::with_capacity(1);
-		tokens.push(TokenType::Normal(String::new()));
-		return Ok(tokens);
-	}
-	let mut buffer = String::with_capacity(line.len()); // biggest token is possible is the line unmodified
-	let mut tokens = Vec::with_capacity(5); // unit properties contain at least 3 tokens, CommonName 5. avoids excessive reallocation
-	let mut delim_pushed = false;
-	let mut last: usize = 0;
-	let mut last_ch: char = '\0';
+    if line.is_empty()
+    {
+        let mut tokens = Vec::with_capacity(1);
+        tokens.push(TokenType::Normal(String::new()));
+        return Ok(tokens);
+    }
+    let mut buffer = String::with_capacity(line.len()); // biggest token is possible is the line unmodified
+    let mut tokens = Vec::with_capacity(5); // unit properties contain at least 3 tokens, CommonName 5. avoids excessive reallocation
+    let mut delim_pushed = false;
+    let mut last: usize = 0;
+    let mut last_ch: char = '\0';
 
-	for (index, ch) in line.chars().enumerate()
-	{
-		if checker.is_esc(ch) && !checker.esc_set()
-		{
-			checker.set_esc(true);
-		}
-		else if checker.esc_set()
-		{
-			if checker.is_delim(ch) || checker.is_esc(ch) || checker.is_comment(ch)
-			{
-				buffer.push(ch);
-				checker.set_esc(false);
-				delim_pushed = false;
-			}
-			else if checker.is_preserved_delim(ch)
-			{
-				buffer.push(checker.esc_char());
-				buffer.push(ch);
-				checker.set_esc(false);
-				delim_pushed = false;
-			}
-			else
-			{
-				last = index;
-				last_ch = ch;
-				break;
-			}
-		}
-		else if checker.is_delim(ch)
-		{
-			let mut new_token = buffer.clone();
-			new_token.shrink_to_fit();
-			checker.feed_token(&new_token, !DELIM, index);
+    for (index, ch) in line.chars().enumerate()
+    {
+        if checker.is_esc(ch) && !checker.esc_set()
+        {
+            checker.set_esc(true);
+        }
+        else if checker.esc_set()
+        {
+            if checker.is_delim(ch) || checker.is_esc(ch) || checker.is_comment(ch)
+            {
+                buffer.push(ch);
+                checker.set_esc(false);
+                delim_pushed = false;
+            }
+            else if checker.is_preserved_delim(ch)
+            {
+                buffer.push(checker.esc_char());
+                buffer.push(ch);
+                checker.set_esc(false);
+                delim_pushed = false;
+            }
+            else
+            {
+                last = index;
+                last_ch = ch;
+                break;
+            }
+        }
+        else if checker.is_delim(ch)
+        {
+            let mut new_token = buffer.clone();
+            new_token.shrink_to_fit();
+            checker.feed_token(&new_token, !DELIM, index);
 
-			tokens.push(TokenType::Normal(new_token));
+            tokens.push(TokenType::Normal(new_token));
 
-			buffer.clear();
-			buffer.push(ch);
+            buffer.clear();
+            buffer.push(ch);
 
-			new_token = buffer.clone();
-			new_token.shrink_to_fit();
-			checker.feed_token(&new_token, DELIM, index);
+            new_token = buffer.clone();
+            new_token.shrink_to_fit();
+            checker.feed_token(&new_token, DELIM, index);
 
-			tokens.push(TokenType::Delim(new_token));
+            tokens.push(TokenType::Delim(new_token));
 
-			buffer.clear();
-			delim_pushed = true;
-		}
-		else if checker.is_comment(ch)
-		{
-			let mut new_token = buffer.clone();
-			new_token.shrink_to_fit();
+            buffer.clear();
+            delim_pushed = true;
+        }
+        else if checker.is_comment(ch)
+        {
+            let mut new_token = buffer.clone();
+            new_token.shrink_to_fit();
 
-			checker.feed_token(&new_token, !DELIM, index);
+            checker.feed_token(&new_token, !DELIM, index);
 
-			tokens.push(TokenType::Normal(new_token));
-			try!(checker.assert_valid(index, true));
-			return Ok(tokens); // if we reach a comment, immediately exit
-		}
-		else
-		{
-			buffer.push(ch);
-			delim_pushed = false;
-		}
+            tokens.push(TokenType::Normal(new_token));
+            try!(checker.assert_valid(index, true));
+            return Ok(tokens); // if we reach a comment, immediately exit
+        }
+        else
+        {
+            buffer.push(ch);
+            delim_pushed = false;
+        }
 
-		try!(checker.assert_valid(index, true));
-		last = index;
-		last_ch = ch;
-	}
+        try!(checker.assert_valid(index, true));
+        last = index;
+        last_ch = ch;
+    }
 
-	if checker.esc_set()
-	{
-		return Err(SyntaxError::BadEscSeq(last,
-						if last_ch == checker.esc_char()
-						{
-							'\0'
-						}
-						else
-						{
-							last_ch
-						})
-		);
-	}
+    if checker.esc_set()
+    {
+        return Err(SyntaxError::BadEscSeq(last,
+                        if last_ch == checker.esc_char()
+                        {
+                            '\0'
+                        }
+                        else
+                        {
+                            last_ch
+                        })
+        );
+    }
 
-	let mut new_token = String::new();
+    let mut new_token = String::new();
 
-	if !buffer.is_empty()
-	{
-		new_token = buffer.clone();
-		new_token.shrink_to_fit();
-		checker.feed_token(&new_token, !DELIM, last);
-		tokens.push(TokenType::Normal(new_token));
-	}
-	else if delim_pushed
-	{
-		checker.feed_token(&new_token, !DELIM, last);
-		tokens.push(TokenType::Normal(new_token));
-	}
+    if !buffer.is_empty()
+    {
+        new_token = buffer.clone();
+        new_token.shrink_to_fit();
+        checker.feed_token(&new_token, !DELIM, last);
+        tokens.push(TokenType::Normal(new_token));
+    }
+    else if delim_pushed
+    {
+        checker.feed_token(&new_token, !DELIM, last);
+        tokens.push(TokenType::Normal(new_token));
+    }
 
-	try!(checker.assert_valid(last, false));
+    try!(checker.assert_valid(last, false));
 
-	Ok(tokens)
+    Ok(tokens)
 }

@@ -102,271 +102,271 @@ Type \'version\' for more details";
 
 struct Options
 {
-	interactive: bool,
-	format: exec::ConversionFmt,
+    interactive: bool,
+    format: exec::ConversionFmt,
 }
 
 impl Options
 {
-	fn new() -> Options
-	{
-		Options {
-			interactive: true,
-			format: exec::ConversionFmt::Desc,
-		}
-	}
+    fn new() -> Options
+    {
+        Options {
+            interactive: true,
+            format: exec::ConversionFmt::Desc,
+        }
+    }
 
-	fn get_opts() -> Result<(Options, Vec<String>), InterpretErr>
-	{
-		let mut opts = Options::new();
-		let mut extras = Vec::with_capacity(env::args().count());
-		let mut args = env::args();
-		args.next(); // skip program name
+    fn get_opts() -> Result<(Options, Vec<String>), InterpretErr>
+    {
+        let mut opts = Options::new();
+        let mut extras = Vec::with_capacity(env::args().count());
+        let mut args = env::args();
+        args.next(); // skip program name
 
-		loop
-		{
-			let arg = match args.next()
-			{
-			Some(opt) => opt,
-			None => break,
-			};
+        loop
+        {
+            let arg = match args.next()
+            {
+            Some(opt) => opt,
+            None => break,
+            };
 
-			if arg.starts_with("--")
-			{
-				match arg.as_ref()
-				{
-				"--help" => return Err(InterpretErr::HelpSig),
-				"--version" => return Err(InterpretErr::VersionSig),
-				_ => return Err(InterpretErr::UnknownLongOpt(arg)),
-				};
-			}
-			else if arg.starts_with("-")
-			{
-				if arg.parse::<f64>().is_ok()
-				{
-					extras.push(arg);
+            if arg.starts_with("--")
+            {
+                match arg.as_ref()
+                {
+                "--help" => return Err(InterpretErr::HelpSig),
+                "--version" => return Err(InterpretErr::VersionSig),
+                _ => return Err(InterpretErr::UnknownLongOpt(arg)),
+                };
+            }
+            else if arg.starts_with("-")
+            {
+                if arg.parse::<f64>().is_ok()
+                {
+                    extras.push(arg);
 
-					for extra in args
-					{
-						extras.push(extra);
-					}
+                    for extra in args
+                    {
+                        extras.push(extra);
+                    }
 
-					if extras.len() < 3
-					{
-						return Err(InterpretErr::IncompleteErr);
-					}
+                    if extras.len() < 3
+                    {
+                        return Err(InterpretErr::IncompleteErr);
+                    }
 
-					opts.interactive = false;
-					break;
-				}
-				else
-				{
-					let mut chars = arg.chars();
-					chars.next(); // get rid of dash
-					for ch in chars
-					{
-						match ch
-						{
-						's' => opts.format = exec::ConversionFmt::Short,
-						'l' => opts.format = exec::ConversionFmt::Long,
-						_ => return Err(InterpretErr::UnknownShortOpt(ch)),
-						};
-					}
-				}
-			}
-			else
-			{
-				extras.push(arg);
+                    opts.interactive = false;
+                    break;
+                }
+                else
+                {
+                    let mut chars = arg.chars();
+                    chars.next(); // get rid of dash
+                    for ch in chars
+                    {
+                        match ch
+                        {
+                        's' => opts.format = exec::ConversionFmt::Short,
+                        'l' => opts.format = exec::ConversionFmt::Long,
+                        _ => return Err(InterpretErr::UnknownShortOpt(ch)),
+                        };
+                    }
+                }
+            }
+            else
+            {
+                extras.push(arg);
 
-				for extra in args
-				{
-					extras.push(extra);
-				}
+                for extra in args
+                {
+                    extras.push(extra);
+                }
 
-				if extras.len() < 3
-				{
-					return Err(InterpretErr::IncompleteErr);
-				}
+                if extras.len() < 3
+                {
+                    return Err(InterpretErr::IncompleteErr);
+                }
 
-				opts.interactive = false;
-				break;
-			}
-		}
+                opts.interactive = false;
+                break;
+            }
+        }
 
-		Ok((opts, extras))
-	}
+        Ok((opts, extras))
+    }
 }
 
 fn line_interpreter(units: &UnitDatabase, opts: &Options)
 {
-	let prompt = "> ".to_string();
-	let mut interpreter: Interpreter<_, _> =
-		interpret::Interpreter::using_streams(stdin(), stdout());
+    let prompt = "> ".to_string();
+    let mut interpreter: Interpreter<_, _> =
+        interpret::Interpreter::using_streams(stdin(), stdout());
 
-	interpreter.format = opts.format;
-	interpreter.publish(&PROGRAM_NAME, &None);
-	interpreter.newline();
-	interpreter.publish(&GREETING_MSG, &None);
-	interpreter.newline();
-	interpreter.publish(&COPYRIGHT_MSG, &None);
-	interpreter.newline();
-	interpreter.newline();
-	interpreter.publish(&"Enter a conversion or a command. Type \'help\' for assistance.", &None);
+    interpreter.format = opts.format;
+    interpreter.publish(&PROGRAM_NAME, &None);
+    interpreter.newline();
+    interpreter.publish(&GREETING_MSG, &None);
+    interpreter.newline();
+    interpreter.publish(&COPYRIGHT_MSG, &None);
+    interpreter.newline();
+    interpreter.newline();
+    interpreter.publish(&"Enter a conversion or a command. Type \'help\' for assistance.", &None);
 
-	loop
-	{
-		interpreter.newline();
-		interpreter.publish(&prompt, &None);
-		let cmd_result = interpreter.interpret();
-		let tokens = match cmd_result
-		{
-			Err(cmd_mesg) => {
-				match cmd_mesg
-				{
-				InterpretErr::BlankLine => {
-					continue;
-				},
-				InterpretErr::ExitSig => {
-					break;
-				},
-				InterpretErr::HelpSig => {
-					interpreter.publish(&INTERACTIVE_HELP_MSG, &None);
-					interpreter.newline();
-				},
-				InterpretErr::VersionSig => {
-					interpreter.publish(&PROGRAM_NAME, &None);
-					interpreter.newline();
-					interpreter.publish(&VERSION_MSG, &None);
-					interpreter.newline();
-					interpreter.publish(&COPYRIGHT_MSG, &None);
-					interpreter.newline();
-				},
-				InterpretErr::CmdSuccess(..) => {
-					interpreter.publish(&cmd_mesg, &None);
-					interpreter.newline();
-				}
-				_ => {
-					interpreter.publish(&cmd_mesg, &Some("Error: ".to_string()));
-					interpreter.newline();
-				},
-				};
+    loop
+    {
+        interpreter.newline();
+        interpreter.publish(&prompt, &None);
+        let cmd_result = interpreter.interpret();
+        let tokens = match cmd_result
+        {
+            Err(cmd_mesg) => {
+                match cmd_mesg
+                {
+                InterpretErr::BlankLine => {
+                    continue;
+                },
+                InterpretErr::ExitSig => {
+                    break;
+                },
+                InterpretErr::HelpSig => {
+                    interpreter.publish(&INTERACTIVE_HELP_MSG, &None);
+                    interpreter.newline();
+                },
+                InterpretErr::VersionSig => {
+                    interpreter.publish(&PROGRAM_NAME, &None);
+                    interpreter.newline();
+                    interpreter.publish(&VERSION_MSG, &None);
+                    interpreter.newline();
+                    interpreter.publish(&COPYRIGHT_MSG, &None);
+                    interpreter.newline();
+                },
+                InterpretErr::CmdSuccess(..) => {
+                    interpreter.publish(&cmd_mesg, &None);
+                    interpreter.newline();
+                }
+                _ => {
+                    interpreter.publish(&cmd_mesg, &Some("Error: ".to_string()));
+                    interpreter.newline();
+                },
+                };
 
-				continue;
-			},
-			Ok(toks) => toks,
-		};
+                continue;
+            },
+            Ok(toks) => toks,
+        };
 
-		let mut conv_primitive = match exec::to_conv_primitive(&tokens)
-		{
-			Ok(prim) => prim,
-			Err(err) => {
-				let mut mesg = String::with_capacity(80);
-				write!(mesg, "In token \'{}\': ", tokens[err.failed_at].peek());
-				interpreter.publish(&err, &Some(mesg));
-				interpreter.newline();
-				continue;
-			},
-		};
+        let mut conv_primitive = match exec::to_conv_primitive(&tokens)
+        {
+            Ok(prim) => prim,
+            Err(err) => {
+                let mut mesg = String::with_capacity(80);
+                write!(mesg, "In token \'{}\': ", tokens[err.failed_at].peek());
+                interpreter.publish(&err, &Some(mesg));
+                interpreter.newline();
+                continue;
+            },
+        };
 
-		match interpreter.perform_recall(&mut conv_primitive)
-		{
-		None => {},
-		Some(err) => {
-			interpreter.publish(&err, &Some("Error: ".to_string()));
-			interpreter.newline();
-			continue;
-		},
-		};
+        match interpreter.perform_recall(&mut conv_primitive)
+        {
+        None => {},
+        Some(err) => {
+            interpreter.publish(&err, &Some("Error: ".to_string()));
+            interpreter.newline();
+            continue;
+        },
+        };
 
-		let mut conversions = exec::convert_all(conv_primitive, units);
+        let mut conversions = exec::convert_all(conv_primitive, units);
 
-		for mut conversion in &mut conversions
-		{
-			conversion.format = interpreter.format;
-			interpreter.publish(&conversion, &None);
-			interpreter.newline();
-		}
+        for mut conversion in &mut conversions
+        {
+            conversion.format = interpreter.format;
+            interpreter.publish(&conversion, &None);
+            interpreter.newline();
+        }
 
-		interpreter.update_recall(&conversions);
-	}
+        interpreter.update_recall(&conversions);
+    }
 }
 
 fn main() {
-	let units = match load_units_list()
-	{
-	Some(new_units) => new_units,
-	None => {
-		println!("Failed to load units database from file.");
-		return;
-	},
-	};
+    let units = match load_units_list()
+    {
+    Some(new_units) => new_units,
+    None => {
+        println!("Failed to load units database from file.");
+        return;
+    },
+    };
 
-	let (opts, mut args) = match Options::get_opts()
-	{
-		Ok(results) => results,
-		Err(err) => {
-			match err
-			{
-			InterpretErr::HelpSig => {
-				println!("{}", &PROGRAM_NAME);
-				println!("{}", &HELP_MSG);
-				println!("{}", &COPYRIGHT_MSG);
-			},
-			InterpretErr::VersionSig => {
-				println!("{}", &PROGRAM_NAME);
-				println!("{}", &VERSION_MSG);
-				println!("{}", &COPYRIGHT_MSG);
-			},
-			_ => {
-				println!("Error: {}", err);
-				println!("Use \'--help \' for assistance");
-			},
-			}
-			return;
-		},
-	};
+    let (opts, mut args) = match Options::get_opts()
+    {
+        Ok(results) => results,
+        Err(err) => {
+            match err
+            {
+            InterpretErr::HelpSig => {
+                println!("{}", &PROGRAM_NAME);
+                println!("{}", &HELP_MSG);
+                println!("{}", &COPYRIGHT_MSG);
+            },
+            InterpretErr::VersionSig => {
+                println!("{}", &PROGRAM_NAME);
+                println!("{}", &VERSION_MSG);
+                println!("{}", &COPYRIGHT_MSG);
+            },
+            _ => {
+                println!("Error: {}", err);
+                println!("Use \'--help \' for assistance");
+            },
+            }
+            return;
+        },
+    };
 
-	if opts.interactive
-	{
-		line_interpreter(&units, &opts);
-	}
-	else
-	{
-		let mut interpreter: Interpreter<_, _> =
-				interpret::Interpreter::using_streams(stdin(), stdout());
+    if opts.interactive
+    {
+        line_interpreter(&units, &opts);
+    }
+    else
+    {
+        let mut interpreter: Interpreter<_, _> =
+                interpret::Interpreter::using_streams(stdin(), stdout());
 
-		interpreter.format = opts.format;
-		let mut args_wrapped: Vec<parse::TokenType> = Vec::with_capacity(3);
+        interpreter.format = opts.format;
+        let mut args_wrapped: Vec<parse::TokenType> = Vec::with_capacity(3);
 
-		for arg in args.drain(..)
-		{
-			args_wrapped.push(parse::TokenType::Normal(arg));
-		}
+        for arg in args.drain(..)
+        {
+            args_wrapped.push(parse::TokenType::Normal(arg));
+        }
 
-		let mut conv_primitive = match exec::to_conv_primitive(&args_wrapped)
-		{
-			Ok(results) => results,
-			Err(err) => {
-				println!("In token \'{}\': {}", args_wrapped[err.failed_at].peek(), err);
-				return;
-			},
-		};
+        let mut conv_primitive = match exec::to_conv_primitive(&args_wrapped)
+        {
+            Ok(results) => results,
+            Err(err) => {
+                println!("In token \'{}\': {}", args_wrapped[err.failed_at].peek(), err);
+                return;
+            },
+        };
 
-		match interpreter.perform_recall(&mut conv_primitive)
-		{
-		None => {},
-		Some(err) => {
-			println!("Error: {}", err);
-			return;
-		},
-		};
+        match interpreter.perform_recall(&mut conv_primitive)
+        {
+        None => {},
+        Some(err) => {
+            println!("Error: {}", err);
+            return;
+        },
+        };
 
-		let mut conversions = exec::convert_all(conv_primitive, &units);
+        let mut conversions = exec::convert_all(conv_primitive, &units);
 
-		for mut conversion in &mut conversions
-		{
-			conversion.format = interpreter.format;
-			println!("{}", conversion);
-		}
-	}
+        for mut conversion in &mut conversions
+        {
+            conversion.format = interpreter.format;
+            println!("{}", conversion);
+        }
+    }
 }
