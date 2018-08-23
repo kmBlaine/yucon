@@ -174,6 +174,7 @@ enum UnitProperty
     UnitType   (&'static str),
     ConvFactor (f64),
     Aliases    (Vec<Rc<String>>),
+    Tags       (Vec<Rc<String>>),
     ZeroPoint  (f64),
     Dimensions (u8),
     Inverse    (bool),
@@ -339,14 +340,14 @@ impl<'a> UnitPropertyCheck<'a>
             {
                 self.state = PropCheckState::OpenBrace;
             }
-            else if token.trim() != "aliases"
+            else if token.trim() == "aliases" || token.trim() == "tags"
             {
                 self.state = PropCheckState::Equals;
-                self.single_val_field = true;
             }
             else
             {
                 self.state = PropCheckState::Equals;
+                self.single_val_field = true;
             }
         },
         PropCheckState::Value => {
@@ -577,6 +578,23 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 
         UnitProperty::Aliases(aliases)
     },
+    "tags" => {
+        let mut tags = Vec::new();
+
+        for token in tokens_iter
+        {
+            match token
+            {
+                TokenType::Normal(tok) => {
+                    tags.push(Rc::new(tok));
+                    field_empty = false;
+                }
+                _ => (),
+            };
+        }
+
+        UnitProperty::Tags(tags)
+    },
     "conv_factor" => {
         tokens_iter.next();
         let (empty, conv_factor) = try!(field_as_num(tokens_iter.next()));
@@ -759,11 +777,11 @@ fn parse_line(line: &str) -> Result<Option<UnitProperty>, ParsePropertyError>
     Ok(Some(unit_property))
 }
 
-fn add_unit(database: &mut UnitDatabase, new_unit: Unit, aliases: &Vec<Rc<String>>)
+fn add_unit(database: &mut UnitDatabase, new_unit: UnitInit, aliases: &Vec<Rc<String>>, tags: &Vec<Rc<String>>)
 {
     if new_unit.is_well_formed()
     {
-        if let Some(unit) = database.add(new_unit, aliases)
+        if let Some(unit) = database.add(new_unit.unit, aliases, tags)
         {
             println!("\n*** ERROR ***\n\
                       Failed to add unit {}: an existing unit shares names with this one\n",
@@ -774,7 +792,7 @@ fn add_unit(database: &mut UnitDatabase, new_unit: Unit, aliases: &Vec<Rc<String
     {
         println!("\n*** ERROR ***\n\
                   Failed to add unit {}: unit is missing mandatory properties.\n",
-                  new_unit.common_name);
+                  new_unit.unit.common_name);
     }
 }
 fn find_and_make_cfg() -> io::Result<File>
@@ -834,8 +852,9 @@ pub fn load_units_list() -> Option<UnitDatabase>
     let mut first_unit = true;
 
     let mut units_database = UnitDatabase::new();
-    let mut new_unit = Unit::new();
+    let mut new_unit = UnitInit::new();
     let mut aliases: Vec<Rc<String>> = Vec::new();
+    let mut tags: Vec<Rc<String>> = Vec::new();
 
 
     while units_cfg.read_line(&mut line).unwrap() > 0
@@ -858,22 +877,35 @@ pub fn load_units_list() -> Option<UnitDatabase>
                     }
                     else
                     {
-                        add_unit(&mut units_database, new_unit, &aliases);
-                        new_unit = Unit::new();
+                        add_unit(&mut units_database, new_unit, &aliases, &tags);
+                        new_unit = UnitInit::new();
                         new_unit.set_common_name(name);
                     }
                 },
                 UnitProperty::Aliases(other_names) => {
-                    if new_unit.has_aliases
+                    if new_unit.unit.has_aliases
                     {
                         println!("\n*** WARNING ***\n\
                                   For unit {}: attempted to assign aliases twice. Ignoring this attempt.\n",
-                                  new_unit.common_name);
+                                  new_unit.unit.common_name);
                     }
                     else
                     {
-                        new_unit.has_aliases = true;
+                        new_unit.unit.has_aliases = true;
                         aliases = other_names;
+                    }
+                },
+                UnitProperty::Tags(tags_) => {
+                    if new_unit.unit.has_tags
+                    {
+                        println!("\n*** WARNING ***\n\
+                                  For unit {}: attempted to assign tags twice. Ignoring this attempt.\n",
+                                  new_unit.unit.common_name);
+                    }
+                    else
+                    {
+                        new_unit.unit.has_tags = true;
+                        tags = tags_;
                     }
                 },
                 UnitProperty::UnitType(unit_type)     => new_unit.set_unit_type(unit_type),
@@ -896,7 +928,7 @@ pub fn load_units_list() -> Option<UnitDatabase>
 
     // units added when a new section begins
     // last unit in file will not be added without this
-    add_unit(&mut units_database, new_unit, &aliases);
+    add_unit(&mut units_database, new_unit, &aliases, &tags);
 
     Some(units_database)
 }

@@ -1,9 +1,9 @@
 /* unit.rs
  * ===
  * Contains the internal unit representation struct and the internal units database.
- * 
+ *
  * This file is a part of:
- * 
+ *
  * Yucon - General Purpose Unit Converter
  * Copyright (C) 2016-2017  Blaine Murphy
  *
@@ -14,7 +14,7 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -37,7 +37,7 @@ pub static UNIT_TYPES: [&'static str; 12] = ["area",
                                              "torque",
                                              "volume",];
 
-// TODO: tracking defaults is only necessary during allocation. add an initilization wrapper
+
 #[derive(Debug)]
 pub struct Unit
 {
@@ -48,12 +48,7 @@ pub struct Unit
     pub unit_type: &'static str, //life time is static because the type strings are embedded
     pub zero_point: f64,
     pub has_aliases: bool,
-    default_name: bool,
-    default_conv: bool,
-    default_dims: bool,
-    default_inv: bool,
-    default_type: bool,
-    default_zpt: bool,
+    pub has_tags: bool,
 }
 
 impl Unit
@@ -68,145 +63,13 @@ impl Unit
             unit_type: UNIT_TYPES[0],
             zero_point: 0.0,
             has_aliases: false,
-            default_name: true,
-            default_conv: true,
-            default_dims: true,
-            default_inv: true,
-            default_type: true,
-            default_zpt: true,
+            has_tags: false,
         }
-    }
-    
-    pub fn set_common_name(&mut self, name: String)
-    {
-        if self.default_name
-        {
-            self.common_name = Rc::new(name);
-            self.default_name = false;
-        }
-        else
-        {
-            unreachable!();
-            // the code is written such that there should never be an attempt
-            // to assign a common_name twice. encountering a new common name
-            // in config triggers a flush of the current unit and starts a new one.
-        }
-    }
-    
-    pub fn set_conv_factor(&mut self, conv_factor: f64)
-    {
-        if self.default_conv
-        {
-            self.conv_factor = conv_factor;
-            self.default_conv = false;
-        }
-        else
-        {
-            println!("\n*** WARNING ***\n\
-                      For unit {}: attemtped to assign conv_factor twice. Ignoring this attempt.\n",
-                      self.common_name);
-        }
-    }
-    
-    pub fn set_dimensions(&mut self, dimensions: u8)
-    {
-        if self.default_dims
-        {
-            self.dimensions = dimensions;
-            self.default_dims = false;
-        }
-        else
-        {
-            println!("\n*** WARNING ***\n\
-                      For unit {}: attemtped to assign dimensions twice. Ignoring this attempt.\n",
-                      self.common_name);
-        }
-    }
-    
-    pub fn set_inverse(&mut self, inverse: bool)
-    {
-        if self.default_inv
-        {
-            self.inverse = inverse;
-            self.default_inv = false;
-        }
-        else
-        {
-            println!("\n*** WARNING ***\n\
-                      For unit {}: attemtped to assign inverse twice. Ignoring this attempt.\n",
-                      self.common_name);
-        }
-    }
-    
-    pub fn set_unit_type(&mut self, unit_type: &'static str)
-    {
-        if self.default_type
-        {
-            self.unit_type = unit_type;
-            self.default_type = false;
-        }
-        else
-        {
-            println!("\n*** WARNING ***\n\
-                      For unit {}: attemtped to assign unit_type twice. Ignoring this attempt.\n",
-                      self.common_name);
-        }
-    }
-    
-    pub fn set_zero_point(&mut self, zero_point: f64)
-    {
-        if self.default_zpt
-        {
-            self.zero_point = zero_point;
-            self.default_zpt = false;
-        }
-        else
-        {
-            println!("\n*** WARNING ***\n\
-                      For unit {}: attemtped to assign zero_point twice. Ignoring this attempt.\n",
-                      self.common_name);
-        }
-    }
-    
-    pub fn is_well_formed(&self) -> bool
-    {
-        !(self.default_name || self.default_conv || self.default_type)
     }
 }
-
-/*
-pub struct UnitScalar<'a>
-{
-    pub unit: &'a Unit,
-    pub scalar: f64,
-    pub prefix: f64
-}
-
-impl<'a> UnitScalar<'a>
-{
-    pub fn convert_to( &self, to: &'a Unit, prefix: f64 ) -> UnitScalar
-    {
-        let mut converted = UnitScalar { unit: to,
-                                         scalar: 1.0,
-                                         prefix: 1.0 };
-
-        converted.scalar = ((self.scalar * self.prefix + self.unit.zero_point)
-                           *(self.unit.conv_factor / to.conv_factor)
-                           - to.zero_point
-                           )
-                           / prefix;
-        converted.prefix = prefix;
-        converted.unit = to;
-
-        let converted = converted;
-
-        converted
-    }
-}
-*/
 
 /* struct UnitDatabase
- * 
+ *
  * This struct is for containing the units that are read from the units.cfg file
  * It is composed of two parts: a B-Tree map for O(log n) search of units by name
  * and a vector for easy listing of all available units. Units are
@@ -220,11 +83,12 @@ impl<'a> UnitScalar<'a>
  *
  *   - units: linear container for all units in the program so that they may
  *       be easily listed at user's request.
- * 
+ *
  */
 pub struct UnitDatabase
 {
-    aliases: BTreeMap<Rc<String>, Rc<Unit>>,
+    default_namespace: BTreeMap<Rc<String>, Rc<Unit>>,
+    namespaces: BTreeMap<Rc<String>, BTreeMap<Rc<String>, Rc<Unit>>>,
     units: Vec<Rc<Unit>>
 }
 
@@ -232,8 +96,66 @@ impl UnitDatabase
 {
     pub fn new() -> UnitDatabase
     {
-        UnitDatabase { aliases: BTreeMap::new(),
+        UnitDatabase { default_namespace: BTreeMap::new(),
+                       namespaces: BTreeMap::new(),
                        units: Vec::new() }
+    }
+
+    /*
+    Checks if a given set of unit aliases will collide with any others in its
+    tags / namespaces. If a collision is detected, the first namespace and alias
+    that caused a collision are returned.
+     */
+    fn check_collisions(&self,
+                        common_name: &Rc<String>,
+                        aliases: &Vec<Rc<String>>,
+                        tags: &Vec<Rc<String>>) -> Option<(Rc<String>, Rc<String>)>
+    {
+        // if the unit has no tags and exists only in the default namespace
+        if tags.is_empty()
+        {
+            if self.default_namespace.contains_key(common_name)
+            {
+                return Some(
+                    (Rc::new("default".to_string()), common_name.clone())
+                );
+            }
+            for alias in aliases.iter()
+            {
+                if self.default_namespace.contains_key(alias)
+                {
+                    return Some(
+                        (Rc::new("default".to_string()), alias.clone())
+                    );
+                }
+            }
+
+            return None;
+        }
+
+        for tag in tags.iter()
+        {
+            if let Some(namespace) = self.namespaces.get(tag)
+            {
+                if namespace.contains_key(common_name)
+                {
+                    return Some(
+                        (tag.clone(), common_name.clone())
+                    );
+                }
+                for alias in aliases.iter()
+                {
+                    if namespace.contains_key(alias)
+                    {
+                        return Some(
+                            (tag.clone(), alias.clone())
+                        );
+                    }
+                }
+            }
+        }
+
+        None
     }
 
     /**
@@ -260,57 +182,190 @@ impl UnitDatabase
     Success: None
     Failure: Some
     */
-    pub fn add(&mut self, unit: Unit, aliases: &Vec<Rc<String>>) -> Option<Unit>
+    pub fn add(&mut self, unit: Unit, aliases: &Vec<Rc<String>>, tags: &Vec<Rc<String>>) -> Option<Unit>
     {
-        let mut exists = false;
+        if let Some(collision) = self.check_collisions(&unit.common_name, aliases, tags)
+        {
+            let (tag, name) = collision;
+            println!("UnitsDatabase: Unit is already registered in one or more of its tags. Unit will not be added.\n\
+                      Colliding tag: '{}'    Colliding name: '{}'",
+                    tag,
+                    name
+            );
 
-        if self.aliases.contains_key(&unit.common_name)
-        {
-            exists = true;
+            return Some(unit);
         }
-        
-        if unit.has_aliases
+
+        let unit_rc = Rc::new(unit);
+        self.units.push(unit_rc.clone());
+
+        if unit_rc.has_tags
         {
-            for alias in aliases
+            for tag in tags.iter()
             {
-                if self.aliases.contains_key(alias)
+                let mut namespace = if self.namespaces.contains_key(tag)
                 {
-                    exists = true;
-                    break;
+                    self.namespaces.get_mut(tag).unwrap()
+                }
+                else
+                {
+                    self.namespaces.insert(tag.clone(), BTreeMap::new());
+                    self.namespaces.get_mut(tag).unwrap()
+                };
+
+                namespace.insert(unit_rc.common_name.clone(), unit_rc.clone());
+
+                for alias in aliases.iter()
+                {
+                    namespace.insert(alias.clone(), unit_rc.clone());
                 }
             }
         }
-
-        if !exists
+        else
         {
-            let common_name = unit.common_name.clone();
-            let has_aliases = unit.has_aliases;
-            let unit_rc = Rc::new(unit);
+            self.default_namespace.insert(unit_rc.common_name.clone(), unit_rc.clone());
 
-            self.units.push(unit_rc.clone());
-            self.aliases.insert(common_name, unit_rc.clone());
-
-            if has_aliases
+            for alias in aliases.iter()
             {
-                for alias in aliases
-                {
-                    self.aliases.insert(alias.clone(), unit_rc.clone());
-                }
+                self.default_namespace.insert(alias.clone(), unit_rc.clone());
             }
-
-            return None; //if adding was sucssesful, we don't need to bother handing back the values
         }
 
-        Some(unit) //if adding was unsucssesful, we need to hand back the values
+        None
     }
 
     pub fn query(&self, name: &String) -> Option<Rc<Unit>>
     {
-        if let Some(unit_rc) = self.aliases.get(&Rc::new(name.clone()))
-        { 
+        if let Some(unit_rc) = self.default_namespace.get(&Rc::new(name.clone()))
+        {
             return Some(unit_rc.clone());
         }
 
         None
+    }
+}
+
+// TODO refactor to make unit field private to ensure no initialization occurs without proper tracking
+pub struct UnitInit
+{
+    pub unit: Unit,
+    default_name: bool,
+    default_conv: bool,
+    default_dims: bool,
+    default_inv: bool,
+    default_type: bool,
+    default_zpt: bool,
+}
+
+impl UnitInit
+{
+    pub fn new() -> UnitInit
+    {
+        UnitInit
+            {
+                unit: Unit::new(),
+                default_name: true,
+                default_conv: true,
+                default_dims: true,
+                default_inv: true,
+                default_type: true,
+                default_zpt: true
+            }
+    }
+
+    pub fn set_common_name(&mut self, name: String)
+    {
+        if self.default_name
+            {
+                self.unit.common_name = Rc::new(name);
+                self.default_name = false;
+            }
+            else
+            {
+                unreachable!();
+                // the code is written such that there should never be an attempt
+                // to assign a common_name twice. encountering a new common name
+                // in config triggers a flush of the current unit and starts a new one.
+            }
+    }
+
+    pub fn set_conv_factor(&mut self, conv_factor: f64)
+    {
+        if self.default_conv
+            {
+                self.unit.conv_factor = conv_factor;
+                self.default_conv = false;
+            }
+            else
+            {
+                println!("\n*** WARNING ***\n\
+                      For unit {}: attemtped to assign conv_factor twice. Ignoring this attempt.\n",
+                         self.unit.common_name);
+            }
+    }
+
+    pub fn set_dimensions(&mut self, dimensions: u8)
+    {
+        if self.default_dims
+            {
+                self.unit.dimensions = dimensions;
+                self.default_dims = false;
+            }
+            else
+            {
+                println!("\n*** WARNING ***\n\
+                      For unit {}: attemtped to assign dimensions twice. Ignoring this attempt.\n",
+                         self.unit.common_name);
+            }
+    }
+
+    pub fn set_inverse(&mut self, inverse: bool)
+    {
+        if self.default_inv
+            {
+                self.unit.inverse = inverse;
+                self.default_inv = false;
+            }
+            else
+            {
+                println!("\n*** WARNING ***\n\
+                      For unit {}: attemtped to assign inverse twice. Ignoring this attempt.\n",
+                         self.unit.common_name);
+            }
+    }
+
+    pub fn set_unit_type(&mut self, unit_type: &'static str)
+    {
+        if self.default_type
+            {
+                self.unit.unit_type = unit_type;
+                self.default_type = false;
+            }
+            else
+            {
+                println!("\n*** WARNING ***\n\
+                      For unit {}: attemtped to assign unit_type twice. Ignoring this attempt.\n",
+                         self.unit.common_name);
+            }
+    }
+
+    pub fn set_zero_point(&mut self, zero_point: f64)
+    {
+        if self.default_zpt
+            {
+                self.unit.zero_point = zero_point;
+                self.default_zpt = false;
+            }
+            else
+            {
+                println!("\n*** WARNING ***\n\
+                      For unit {}: attemtped to assign zero_point twice. Ignoring this attempt.\n",
+                         self.unit.common_name);
+            }
+    }
+
+    pub fn is_well_formed(&self) -> bool
+    {
+        !(self.default_name || self.default_conv || self.default_type)
     }
 }
