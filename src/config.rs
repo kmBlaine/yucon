@@ -866,7 +866,6 @@ pub fn load_units_list() -> Option<UnitDatabase>
         Ok(wrapper) => {
             if let Some(prop) = wrapper
             {
-                // TODO: excessive code. change this block to an inline function for clarity
                 match prop
                 {
                 UnitProperty::CommonName(name) => {
@@ -880,6 +879,8 @@ pub fn load_units_list() -> Option<UnitDatabase>
                         add_unit(&mut units_database, new_unit, &aliases, &tags);
                         new_unit = UnitInit::new();
                         new_unit.set_common_name(name);
+                        aliases = Vec::new();
+                        tags = Vec::new();
                     }
                 },
                 UnitProperty::Aliases(other_names) => {

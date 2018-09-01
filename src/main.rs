@@ -212,6 +212,7 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
     interpreter.newline();
     interpreter.newline();
     interpreter.publish(&"Enter a conversion or a command. Type \'help\' for assistance.", &None);
+    interpreter.newline();
 
     loop
     {

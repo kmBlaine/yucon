@@ -1,9 +1,9 @@
 /* exec.rs
  * ===
  * Contains the bulk of expression parsing and unit conversion logic.
- * 
+ *
  * This file is a part of:
- * 
+ *
  * Yucon - General Purpose Unit Converter
  * Copyright (C) 2016-2017  Blaine Murphy
  *
@@ -14,7 +14,7 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -30,6 +30,7 @@ use ::parse::SyntaxError;
 use ::parse::TokenType;
 use ::parse;
 use std::error::Error;
+use std::vec::Drain;
 
 #[derive(Debug)]
 pub enum ExprParseError
@@ -101,7 +102,7 @@ impl Error for GeneralParseError
     {
         self.err.description()
     }
-    
+
     fn cause(&self) -> Option<&Error>
     {
         Some(&self.err)
@@ -175,7 +176,7 @@ fn prefix_as_num(prefix: char) -> Option<f64>
     'y' => 1.0e-24,
     _   => return None, // default
     };
-    
+
     Some(num)
 }
 
@@ -186,6 +187,8 @@ pub struct Conversion
     to_prefix: char,
     pub from_alias: String,
     pub to_alias: String,
+    pub from_tag: Option<String>,
+    pub to_tag: Option<String>,
     pub from: Option<Rc<Unit>>,
     pub to: Option<Rc<Unit>>,
     pub input: f64,
@@ -195,14 +198,17 @@ pub struct Conversion
 
 impl Conversion
 {
-    fn new(input_prefix: char, input_alias: String,
-        output_prefix: char, output_alias: String, input_val: f64) -> Conversion
+    fn new(input_prefix: char, input_alias: String, input_tag: Option<String>,
+        output_prefix: char, output_alias: String, output_tag: Option<String>,
+        input_val: f64) -> Conversion
     {
         Conversion {
             from_prefix: input_prefix,
             to_prefix: output_prefix,
             from_alias: input_alias,
             to_alias: output_alias,
+            from_tag: input_tag,
+            to_tag: output_tag,
             from: None,
             to: None,
             input: input_val,
@@ -253,7 +259,7 @@ impl Display for Conversion
             match err
             {
             &ConversionError::OutOfRange(in_or_out) => {
-                write!(f, "conversion error: {} value is out of range",
+                write!(f, "Conversion error: {} value is out of range",
                     if in_or_out == OUTPUT
                     {
                         "output"
@@ -264,7 +270,8 @@ impl Display for Conversion
                     })
             },
             &ConversionError::UnitNotFound(in_or_out) => {
-                write!(f, "conversion error: no unit called \'{}\' was not found",
+                // TODO output tag
+                write!(f, "Conversion error: no unit called \'{}\' was found",
                     if in_or_out == OUTPUT
                     {
                         &self.to_alias
@@ -275,7 +282,7 @@ impl Display for Conversion
                     })
             },
             &ConversionError::TypeMismatch =>
-                write!(f, "conversion error: input and output types differ.\
+                write!(f, "Conversion error: input and output types differ.\
                           \'{}\' is a {} and \'{}\' is a {}",
                           self.from_alias, self.from.as_ref().unwrap().unit_type,
                           self.to_alias, self.to.as_ref().unwrap().unit_type),
@@ -306,7 +313,7 @@ impl<'a> NumberCheck<'a>
         NumberCheck {
             token: tok,
             valid: true,
-            state: NumberCheckState::FloatLiteral, 
+            state: NumberCheckState::FloatLiteral,
         }
     }
 }
@@ -343,7 +350,7 @@ impl<'a> SyntaxChecker for NumberCheck<'a>
                     self.valid = false;
                 }
             },
-            
+
             NumberCheckState::Trailing => {
                 if !token.is_empty()
                 {
@@ -353,7 +360,7 @@ impl<'a> SyntaxChecker for NumberCheck<'a>
             _ => unreachable!("number syntax check reached impossible state"),
             };
         }
-        
+
         self.valid
     }
 
@@ -406,7 +413,8 @@ impl<'a> SyntaxChecker for NumberCheck<'a>
             };
         }
 
-        if !self.valid{
+        if !self.valid
+        {
             match self.state
             {
             NumberCheckState::Trailing => {
@@ -415,7 +423,7 @@ impl<'a> SyntaxChecker for NumberCheck<'a>
             _ => (),
             };
         }
-        
+
         Ok(())
     }
 
@@ -426,7 +434,7 @@ impl<'a> SyntaxChecker for NumberCheck<'a>
 
     fn set_esc(&mut self, set: bool)
     {
-        
+
     }
 
     fn reset(&mut self)
@@ -448,19 +456,19 @@ pub fn parse_number_expr(token: &String) -> Result<NumberExpr, ExprParseError>
     // if the syntax check passed, you know you are either getting a semicolon or a float literal
     let mut tokens: Vec<TokenType> = try!(parse::tokenize(token, &mut number_check));
     tokens.retain(|tok| !tok.is_empty());
-    
+
     if tokens.len() < 1
     {
         return Err(
             ExprParseError::from(
                 SyntaxError::Expected(0, "float literal or recall expression".to_string())));
     }
-    
+
     let mut value_expr = NumberExpr {
         value: -1.0,
         recall: false,
     };
-    
+
     for (index, tok) in tokens.drain(..).enumerate()
     {
         if index > 0
@@ -491,7 +499,7 @@ pub fn parse_number_expr(token: &String) -> Result<NumberExpr, ExprParseError>
         },
         };
     }
-    
+
     Ok(value_expr)
 }
 
@@ -502,7 +510,9 @@ enum UnitCheckState
     UnderscoreOrColon,
     PrefixOrName,
     Colon,
-    Trailing,
+    FinishOrTag,
+    Tag,
+    Finish
 }
 
 
@@ -540,7 +550,7 @@ impl SyntaxChecker for UnitCheck
                 }
                 else
                 {
-                    self.state = UnitCheckState::Trailing;
+                    self.state = UnitCheckState::FinishOrTag;
                 }
             },
             UnitCheckState::UnderscoreOrColon if delim => {
@@ -550,7 +560,7 @@ impl SyntaxChecker for UnitCheck
                 }
                 else if token == ":"
                 {
-                    self.state = UnitCheckState::Trailing;
+                    self.state = UnitCheckState::FinishOrTag;
                 }
                 else
                 {
@@ -568,20 +578,41 @@ impl SyntaxChecker for UnitCheck
                 }
                 else
                 {
-                    self.state = UnitCheckState::Trailing;
+                    self.state = UnitCheckState::FinishOrTag;
                 }
             },
             UnitCheckState::Colon if delim => {
                 if token == ":"
                 {
-                    self.state = UnitCheckState::Trailing;
+                    self.state = UnitCheckState::FinishOrTag;
                 }
                 else
                 {
                     self.valid = false;
                 }
             },
-            UnitCheckState::Trailing => {
+            UnitCheckState::FinishOrTag => {
+                if token == "@"
+                {
+                    self.state = UnitCheckState::Tag
+                }
+                else if !token.is_empty()
+                {
+                    self.valid = false;
+                }
+                // if token is empty, it means we came from Colon. Wait for next
+            },
+            UnitCheckState::Tag if !delim => {
+                if token.is_empty()
+                {
+                    self.valid = false;
+                }
+                else
+                {
+                    self.state = UnitCheckState::Finish;
+                }
+            },
+            UnitCheckState::Finish => {
                 if !token.is_empty()
                 {
                     self.valid = false;
@@ -590,41 +621,42 @@ impl SyntaxChecker for UnitCheck
             _ => unreachable!("unit expression syntax check reached impossible state"),
             };
         }
-        
+
         self.valid
     }
-    
+
     fn is_esc(&self, ch: char) -> bool
     {
         ch == '\\'
     }
-    
+
     fn is_comment(&self, ch: char) -> bool
     {
         false
     }
-    
+
     fn is_delim(&self, ch: char) -> bool
     {
         ch == '_' ||
-        ch == ':'
+        ch == ':' ||
+        ch == '@'
     }
-    
+
     fn is_preserved_delim(&self, ch: char) -> bool
     {
         false
     }
-    
+
     fn esc_char(&self) -> char
     {
         '\\'
     }
-    
+
     fn valid(&self) -> bool
     {
         self.valid
     }
-    
+
     fn assert_valid(&self, index: usize, more_tokens: bool) -> Result<(), SyntaxError>
     {
         if !more_tokens || !self.valid
@@ -636,38 +668,46 @@ impl SyntaxChecker for UnitCheck
                         "unit name or recall expression".to_string()));
             },
             UnitCheckState::PrefixOrName | UnitCheckState::Colon => {
-                return Err(SyntaxError::Expected(index, 
+                return Err(SyntaxError::Expected(index,
                         "metric prefix together with unit name / recall expression".to_string()));
             },
+            UnitCheckState::Tag => {
+                return Err(SyntaxError::Expected(index,
+                        "a non-emtpy tag for the unit".to_string()));
+            }
             _ => (),
             };
         }
-        
+
         if !self.valid
         {
             match self.state
             {
-            UnitCheckState::Trailing => {
+            UnitCheckState::FinishOrTag => {
                 return Err(SyntaxError::Expected(index,
-                        "no trailing expressions after unit name".to_string()));
+                        "a tag or nothing at all after unit name / recall expression".to_string()));
             },
+            UnitCheckState::Finish => {
+                return Err(SyntaxError::Expected(index,
+                        "nothing following a tag".to_string()));
+            }
             _ => (),
             };
         }
-        
+
         Ok(())
     }
-    
+
     fn esc_set(&self) -> bool
     {
         self.esc_seq
     }
-    
+
     fn set_esc(&mut self, set: bool)
     {
         self.esc_seq = set;
     }
-    
+
     fn reset(&mut self)
     {
         self.valid = true;
@@ -682,6 +722,40 @@ pub struct UnitExpr
     pub prefix: char,
     pub alias: Option<String>,
     pub recall: bool,
+    pub tag: Option<String>,
+}
+
+fn process_alias_or_recall(next_token: Option<TokenType>, unit_expr: &mut UnitExpr, tokens_iter: &mut Drain<TokenType>)
+    -> Result<Option<TokenType>, ExprParseError>
+{
+    match next_token.unwrap()
+    {
+        TokenType::Normal(alias) => unit_expr.alias = Some(alias),
+        TokenType::Delim(ref delim) if delim == ":" => unit_expr.recall = true,
+        token @ _ => unreachable!("unexpected token while parsing alias / recall: {:?}", token),
+    };
+
+    Ok(tokens_iter.next())
+}
+
+fn process_tag(next_token: Option<TokenType>, unit_expr: &mut UnitExpr, tokens_iter: &mut Drain<TokenType>)
+    -> Result<Option<TokenType>, ExprParseError>
+{
+    let more = if next_token.is_some()
+    {
+        match next_token.unwrap()
+        {
+            TokenType::Delim(ref delim) if delim == "@" => unit_expr.tag = Some(tokens_iter.next().unwrap().unwrap()),
+            token @ _ => unreachable!("unexpected token while parsing tag: {:?}", token),
+        };
+        tokens_iter.next()
+    }
+    else
+    {
+        None
+    };
+
+    Ok(more)
 }
 
 pub fn parse_unit_expr(token: &String) -> Result<UnitExpr, ExprParseError>
@@ -689,17 +763,18 @@ pub fn parse_unit_expr(token: &String) -> Result<UnitExpr, ExprParseError>
     let mut expr_checker = UnitCheck::new();
     let mut tokens: Vec<TokenType> = try!(parse::tokenize(token, &mut expr_checker));
     tokens.retain(|tok| !tok.is_empty());
-    
+
     if tokens.len() < 1
     {
         return Err(ExprParseError::from(SyntaxError::Expected(0,
                 "metric prefix together with unit name / recall expression".to_string())));
     }
-    
+
     let mut unit_expr = UnitExpr {
         prefix: NO_PREFIX,
         alias: None,
         recall: false,
+        tag: None,
     };
 
     let mut tokens_iter = tokens.drain(..);
@@ -716,39 +791,31 @@ pub fn parse_unit_expr(token: &String) -> Result<UnitExpr, ExprParseError>
         {
             return Err(ExprParseError::BadPrefix(prefix));
         }
-        
+
         unit_expr.prefix = prefix;
-        
-        if let Some(trailing) = tokens_iter.next()
+
+        for ch in alias_iter
         {
-            match trailing
-            {
-            TokenType::Delim(ref colon) if colon == ":" => {
-                unit_expr.recall = true;
-            },
-            _ => unreachable!("illegal delimiter in unit expression after syntax check"),
-            };
+            new_alias.push(ch);
         }
-        else
-        {
-            for ch in alias_iter
-            {
-                new_alias.push(ch);
-            }
-            
-            unit_expr.alias = Some(new_alias);
-        }
-        
-        if tokens_iter.next().is_some()
+
+        let mut iter_result = tokens_iter.next();
+
+        iter_result = try!(process_alias_or_recall(iter_result, &mut unit_expr, &mut tokens_iter));
+        iter_result = try!(process_tag(iter_result, &mut unit_expr, &mut tokens_iter));
+
+        if iter_result.is_some()
         {
             unreachable!("extra tokens in unit expression after syntax check");
         }
     },
     TokenType::Delim(ref delim) if delim == ":" => {
         unit_expr.recall = true;
+        let iter_result = try!(process_tag(tokens_iter.next(), &mut unit_expr, &mut tokens_iter));
     },
     TokenType::Normal(alias) => {
         unit_expr.alias = Some(alias);
+        let iter_result = try!(process_tag(tokens_iter.next(), &mut unit_expr, &mut tokens_iter));
     },
     _ => unreachable!("unexpected token begins unit expression"),
     };
@@ -779,10 +846,10 @@ enum ConvPrimState
  * and converts this line into a Number and Unit Exprs for convient use later
  * in the program. Acts as an intermediary to filter out syntax errors before
  * they reach the main conversion routines.
- * 
+ *
  * Paramters:
  *   tokens - line tokenized at spaces given as Vec<TokenType>
- * 
+ *
  * Returns: Result<>
  *   Ok(ConvPrimitve) - the line converted to expressions
  *   Error(ExprParseError) - error if any occured
@@ -792,11 +859,12 @@ pub fn to_conv_primitive(mut tokens: &Vec<TokenType>) -> Result<ConvPrimitive, G
     let mut value_exprs: Vec<NumberExpr> = Vec::new(); //NumberExpr { value: 0.0, recall: false };
     let mut unit_in_expr = UnitExpr { prefix: NO_PREFIX,
                                       alias: None,
-                                      recall: false };
+                                      recall: false,
+                                      tag: None };
     let mut unit_out_exprs: Vec<UnitExpr> = Vec::new();
-    
+
     let mut state = ConvPrimState::GetValueExpr;
-    
+
     for (index, token) in tokens.iter().enumerate()
     {
         let expr = match token
@@ -881,7 +949,7 @@ pub fn to_conv_primitive(mut tokens: &Vec<TokenType>) -> Result<ConvPrimitive, G
             };
         }
     }
-    
+
     Ok(ConvPrimitive { input_vals: value_exprs,
                        input_unit: unit_in_expr,
                        output_units: unit_out_exprs })
@@ -912,10 +980,13 @@ pub fn to_conv_primitive(mut tokens: &Vec<TokenType>) -> Result<ConvPrimitive, G
  *   6. invert result if necessary
  *   7. scale result using prefix and dimensions
  */
-pub fn convert(input: f64, from_prefix: char, from: String,
-    to_prefix: char, to: String, units: &UnitDatabase) -> Conversion
+pub fn convert(input: f64, from_prefix: char, from: String, from_tag: Option<String>,
+    to_prefix: char, to: String, to_tag: Option<String>, units: &UnitDatabase) -> Conversion
 {
-    let mut conversion = Conversion::new(from_prefix, from, to_prefix, to, input);
+    //println!("from_tag: {:?}    to_tag: {:?}", from_tag, to_tag);
+    let mut conversion = Conversion::new(from_prefix,from, from_tag,
+                                         to_prefix,to, to_tag,
+                                         input);
 
     // if the input value is NaN, INF, or too small
     // Exactly 0 is acceptable however which is_normal() does not account for
@@ -925,8 +996,8 @@ pub fn convert(input: f64, from_prefix: char, from: String,
         return conversion;
     }
 
-    conversion.from = units.query(&conversion.from_alias);
-    conversion.to = units.query(&conversion.to_alias);
+    conversion.from = units.query(&conversion.from_alias, conversion.from_tag.as_ref());
+    conversion.to = units.query(&conversion.to_alias, conversion.to_tag.as_ref());
 
     if conversion.from.is_none()
     {
@@ -940,7 +1011,7 @@ pub fn convert(input: f64, from_prefix: char, from: String,
     {
         return conversion;
     }
-    
+
     if conversion.to.as_ref().unwrap().unit_type !=
         conversion.from.as_ref().unwrap().unit_type
     {
@@ -1018,14 +1089,15 @@ pub fn convert_all(conv_primitive: ConvPrimitive, units: &UnitDatabase) -> Vec<C
     {
         for output_unit in conv_primitive.output_units.iter()
         {
+            //println!("{:?}", output_unit);
             all_conversions.push(
                 convert(value_expr.value,
-                        conv_primitive.input_unit.prefix, conv_primitive.input_unit.alias.clone().unwrap(),
-                        output_unit.clone().prefix, output_unit.clone().alias.unwrap(),
+                        conv_primitive.input_unit.prefix, conv_primitive.input_unit.alias.clone().unwrap(), conv_primitive.input_unit.tag.clone(),
+                        output_unit.clone().prefix, output_unit.clone().alias.unwrap(), output_unit.tag.clone(),
                         units)
             );
         }
     }
-    
+
     all_conversions
 }
