@@ -29,7 +29,7 @@ use std::io::stdout;
 use std::fmt::Write;
 
 static PROGRAM_NAME: &'static str = "\
-YUCON - General Purpose Unit Converter - v0.2.2";
+YUCON - General Purpose Unit Converter - v0.3";
 
 static COPYRIGHT_MSG: &'static str = "\
 Copyright (C) 2016-2018 Blaine Murphy";
@@ -60,7 +60,7 @@ This is free software licensed under the GNU General Public License v3
 Use \'--version\' for more details";
 
 static VERSION_MSG: &'static str = "\
-\0  Released 23 Feb 2018
+\0  Released 01 Sep 2018
   Source code available at <https://github.com/kmBlaine/yucon>
   See doc/Changelog.md for version specific details
   License: GNU Public License v3+

@@ -87,18 +87,29 @@ impl Unit
  */
 pub struct UnitDatabase
 {
+    // TODO make default_namespace part of the namespaces tree
     default_namespace: BTreeMap<Rc<String>, Rc<Unit>>,
     namespaces: BTreeMap<Rc<String>, BTreeMap<Rc<String>, Rc<Unit>>>,
-    units: Vec<Rc<Unit>>
+    units: Vec<Rc<Unit>>,
+    preferred_namespace: Rc<String>,
+    //default_namespace_: Rc<String>
 }
 
 impl UnitDatabase
 {
     pub fn new() -> UnitDatabase
     {
+        let preferred = Rc::new("us".to_string());
+        //let default = Rc::new("default".to_string());
+        let mut namespaces_ = BTreeMap::new();
+        namespaces_.insert(preferred.clone(), BTreeMap::new());
+        //namespaces_.insert(default.clone(), BTreeMap::new());
+
         UnitDatabase { default_namespace: BTreeMap::new(),
-                       namespaces: BTreeMap::new(),
-                       units: Vec::new() }
+                       namespaces: namespaces_,
+                       units: Vec::new(),
+                       preferred_namespace: preferred,
+                       /*default_namespace_: default,*/ }
     }
 
     /*
@@ -142,9 +153,22 @@ impl UnitDatabase
                         (tag.clone(), unit.common_name.clone())
                     );
                 }
+
                 for alias in aliases.iter()
                 {
                     if namespace.contains_key(alias)
+                    {
+                        return Some(
+                            (tag.clone(), alias.clone())
+                        );
+                    }
+                }
+            }
+            else if tag.as_ref().as_str().eq("default")
+            {
+                for alias in aliases.iter()
+                {
+                    if self.default_namespace.contains_key(alias)
                     {
                         return Some(
                             (tag.clone(), alias.clone())
@@ -206,6 +230,10 @@ impl UnitDatabase
                 {
                     self.namespaces.get_mut(tag).unwrap()
                 }
+                else if tag.as_str().eq("default")
+                {
+                    &mut self.default_namespace
+                }
                 else
                 {
                     self.namespaces.insert(tag.clone(), BTreeMap::new());
@@ -236,28 +264,78 @@ impl UnitDatabase
     pub fn query(&self, name: &String, tag: Option<&String>) -> Option<Rc<Unit>>
     {
         //println!("name: {:?}    tag: {:?}", name, tag);
-        if tag.is_some()
+        let unit_result = if tag.is_some()
         {
+            // if the unit was tagged, search only in the tagged namespace
             if let Some(namespace) = self.namespaces.get(tag.unwrap())
             {
                 if let Some(unit_rc) = namespace.get(&Rc::new(name.clone()))
                 {
-                    return Some(unit_rc.clone());
+                    Some(unit_rc.clone())
                 }
-                return None;
+                else
+                {
+                    None
+                }
             }
             else
             {
-                return None;
+                None
             }
         }
+        else
+        {
+            // if the unit was not tagged search internal namespaces in the following order
+            // 1. Preferred tag
+            // 2. Default namespace
+            // 3. All registered namespaces in alphabetical order
+            let mut inner_result = if let Some(unit) = self.namespaces.get(&self.preferred_namespace).unwrap().get(name)
+            {
+                Some(unit.clone())
+            }
+            else
+            {
+                None
+            };
 
+            if inner_result.is_none()
+            {
+                inner_result = if let Some(unit) = self.default_namespace.get(name)
+                {
+                    Some(unit.clone())
+                }
+                else
+                {
+                    None
+                }
+            }
+
+            if inner_result.is_none()
+            {
+                for (registered_tag, namespace) in self.namespaces.iter()
+                {
+                    if registered_tag.eq(&self.preferred_namespace)
+                    {
+                        continue;
+                    }
+                    if let Some(unit) = namespace.get(name)
+                    {
+                        inner_result = Some(unit.clone());
+                        break;
+                    }
+                }
+            }
+
+            inner_result
+        };
+        /*
         if let Some(unit_rc) = self.default_namespace.get(&Rc::new(name.clone()))
         {
             return Some(unit_rc.clone());
         }
+        */
 
-        None
+        unit_result
     }
 }
 
