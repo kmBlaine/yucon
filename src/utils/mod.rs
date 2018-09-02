@@ -2,9 +2,9 @@
  * ===
  * Defines a set of useful parsing functions and traits allowing the easy implementation of
  * new parsers without much redundant code.
- * 
+ *
  * This file is a part of:
- * 
+ *
  * Yucon - General Purpose Unit Converter
  * Copyright (C) 2016-2017  Blaine Murphy
  *
@@ -15,16 +15,14 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::error;
 use std::error::Error;
 use std::fmt;
-use std::fmt::Formatter;
-use std::fmt::Display;
+use std::fmt::{Formatter, Display};
 
 #[derive(Debug)]
 pub enum SyntaxError
@@ -43,7 +41,7 @@ impl Error for SyntaxError
         SyntaxError::BadEscSeq(..) => "reached bad escape sequence",
         }
     }
-    
+
     fn cause(&self) -> Option<&Error>
     {
         None
@@ -67,7 +65,7 @@ impl Display for SyntaxError
 }
 
 /* trait SyntaxChecker
- * 
+ *
  * Description: this is a generic trait that represents a token-based syntax,
  *   allowing wildly different syntaxes to be handled by the same
  *   tokenization routine and be validated at the time of tokenization. See
@@ -182,7 +180,7 @@ impl TokenType
             TokenType::Normal(tok) => return tok,
         }
     }
-    
+
     // Peeks at the wrapped value. Returns reference to String for convenience
     // when working with borrowed TokenTypes
     pub fn peek(&self) -> &String
@@ -193,7 +191,7 @@ impl TokenType
         TokenType::Normal(ref tok) => tok,
         }
     }
-    
+
     // Checks if the contained string is empty so that unwrapping is not
     // necessary
     pub fn is_empty(&self) -> bool
@@ -208,7 +206,7 @@ impl TokenType
 /* Attemtps to tokenizes a line according to the syntax described by 'checker'.
  * If the line's syntax is valid, a vector of TokenType wrapped strings will be
  * returned. Otherwise, a SyntaxError will be raised or propogated.
- * 
+ *
  * Parameters:
  *   - line    : string of text to be tokenized
  *   - checker : set of syntax rules to tokenize with. must implement
@@ -339,4 +337,37 @@ pub fn tokenize<S: SyntaxChecker>(line: &str, checker: &mut S) -> Result<Vec<Tok
     try!(checker.assert_valid(last, false));
 
     Ok(tokens)
+}
+
+pub const NO_PREFIX: char = '\0';
+
+pub fn prefix_as_num(prefix: char) -> Option<f64>
+{
+    let num: f64 = match prefix
+    {
+    'Y' => 1.0e24,
+    'Z' => 1.0e21,
+    'E' => 1.0e18,
+    'P' => 1.0e15,
+    'T' => 1.0e12,
+    'G' => 1.0e9,
+    'M' => 1.0e6,
+    'k' => 1.0e3,
+    'h' => 1.0e2,
+    'D' => 1.0e1,
+    NO_PREFIX => 1.0,
+    'd' => 1.0e-1,
+    'c' => 1.0e-2,
+    'm' => 1.0e-3,
+    'u' => 1.0e-6,
+    'n' => 1.0e-9,
+    'p' => 1.0e-12,
+    'f' => 1.0e-15,
+    'a' => 1.0e-18,
+    'z' => 1.0e-21,
+    'y' => 1.0e-24,
+    _   => return None, // default
+    };
+
+    Some(num)
 }

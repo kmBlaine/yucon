@@ -19,6 +19,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod config;
+
 use std::collections::BTreeMap;
 use std::rc::Rc;
 

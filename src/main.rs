@@ -14,19 +14,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod unit;
-mod config;
-mod parse;
-mod exec;
-mod interpret;
+mod runtime;
+mod utils;
 
-use unit::*;
-use config::*;
-use interpret::*;
 use std::env;
 use std::io::stdin;
 use std::io::stdout;
 use std::fmt::Write;
+
+use ::runtime::{Interpreter, InterpretErr};
+use ::runtime::parse::to_conv_primitive;
+use ::runtime::convert::{convert_all, ConversionFmt};
+use ::runtime::units::UnitDatabase;
+use ::runtime::units::config::load_units_list;
+use ::utils::TokenType;
 
 static PROGRAM_NAME: &'static str = "\
 YUCON - General Purpose Unit Converter - v0.3";
@@ -103,7 +104,7 @@ Type \'version\' for more details";
 struct Options
 {
     interactive: bool,
-    format: exec::ConversionFmt,
+    format: ConversionFmt,
 }
 
 impl Options
@@ -112,7 +113,7 @@ impl Options
     {
         Options {
             interactive: true,
-            format: exec::ConversionFmt::Desc,
+            format: ConversionFmt::Desc,
         }
     }
 
@@ -167,8 +168,8 @@ impl Options
                     {
                         match ch
                         {
-                        's' => opts.format = exec::ConversionFmt::Short,
-                        'l' => opts.format = exec::ConversionFmt::Long,
+                        's' => opts.format = ConversionFmt::Short,
+                        'l' => opts.format = ConversionFmt::Long,
                         _ => return Err(InterpretErr::UnknownShortOpt(ch)),
                         };
                     }
@@ -201,7 +202,7 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
 {
     let prompt = "> ".to_string();
     let mut interpreter: Interpreter<_, _> =
-        interpret::Interpreter::using_streams(stdin(), stdout());
+        Interpreter::using_streams(stdin(), stdout());
 
     interpreter.format = opts.format;
     interpreter.publish(&PROGRAM_NAME, &None);
@@ -257,7 +258,7 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
             Ok(toks) => toks,
         };
 
-        let mut conv_primitive = match exec::to_conv_primitive(&tokens)
+        let mut conv_primitive = match to_conv_primitive(&tokens)
         {
             Ok(prim) => prim,
             Err(err) => {
@@ -279,7 +280,7 @@ fn line_interpreter(units: &UnitDatabase, opts: &Options)
         },
         };
 
-        let mut conversions = exec::convert_all(conv_primitive, units);
+        let mut conversions = convert_all(conv_primitive, units);
 
         for mut conversion in &mut conversions
         {
@@ -334,17 +335,17 @@ fn main() {
     else
     {
         let mut interpreter: Interpreter<_, _> =
-                interpret::Interpreter::using_streams(stdin(), stdout());
+                Interpreter::using_streams(stdin(), stdout());
 
         interpreter.format = opts.format;
-        let mut args_wrapped: Vec<parse::TokenType> = Vec::with_capacity(3);
+        let mut args_wrapped: Vec<TokenType> = Vec::with_capacity(3);
 
         for arg in args.drain(..)
         {
-            args_wrapped.push(parse::TokenType::Normal(arg));
+            args_wrapped.push(TokenType::Normal(arg));
         }
 
-        let mut conv_primitive = match exec::to_conv_primitive(&args_wrapped)
+        let mut conv_primitive = match to_conv_primitive(&args_wrapped)
         {
             Ok(results) => results,
             Err(err) => {
@@ -362,7 +363,7 @@ fn main() {
         },
         };
 
-        let mut conversions = exec::convert_all(conv_primitive, &units);
+        let mut conversions = convert_all(conv_primitive, &units);
 
         for mut conversion in &mut conversions
         {

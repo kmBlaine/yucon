@@ -20,7 +20,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::error;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
@@ -30,14 +29,12 @@ use std::fs::File;
 use std::io;
 use std::io::BufReader;
 use std::io::prelude::*;
-use ::parse;
-use ::parse::*;
-use ::unit;
-use ::unit::*;
-use std::rc;
 use std::rc::Rc;
 use std::num::ParseFloatError;
 use std::env;
+
+use ::utils::*;
+use ::runtime::units::*;
 
 
 /* enum ParsePropertyError
@@ -506,7 +503,7 @@ fn get_unit_type(requested_type: String) -> Result<&'static str, ParsePropertyEr
     { // scope to avoid borrow problem when handing string to NoSuchType error
     let user_type = requested_type.as_str();
 
-    for unit_type in unit::UNIT_TYPES.iter()
+    for unit_type in UNIT_TYPES.iter()
     {
         if *unit_type == user_type
         {
@@ -639,7 +636,7 @@ fn parse_key_value(mut tokens: Vec<TokenType>) -> Result<UnitProperty, ParseProp
 
         let unit_type = match tokens_iter.next()
         {
-            None      => unit::UNIT_TYPES[0], // technically an error but this will be caught later by the empty field check
+            None      => UNIT_TYPES[0], // technically an error but this will be caught later by the empty field check
             Some(val) => {
                 field_empty = false;
                 try!(get_unit_type(val.unwrap()))
