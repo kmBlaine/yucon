@@ -1,4 +1,4 @@
-/* config.rs
+/* runtime/units/config.rs
  * ===
  * Contains the functions for reading the units.cfg file and compiling it into the units
  * database.
@@ -822,8 +822,20 @@ fn find_and_make_cfg() -> io::Result<File>
         Err(err) => {
             let default_file = try!(File::open(&default_path));
             home_path.push(".yucon");
-            try!(fs::create_dir(home_path));
-            try!(fs::copy(&default_path, &home_cfg));
+            if let Err(dir_create_err) = fs::create_dir(home_path)
+            {
+                println!(
+                    "*** WARNING *** Failed to create a yucon configuration directory for current user: {}",
+                    dir_create_err
+                );
+            }
+            else if let Err(file_copy_err) = fs::copy(&default_path, &home_cfg)
+            {
+                println!(
+                    "*** WARNING *** Failed to copy default units.cfg to user's configuration directory: {}",
+                    file_copy_err
+                );
+            }
             Ok(default_file)
         },
         Ok(file) => {
@@ -837,7 +849,7 @@ pub fn load_units_list() -> Option<UnitDatabase>
     let file = match find_and_make_cfg()
     {
         Err(err) => {
-            println!("Unable to open units.cfg: {}", err.description());
+            println!("*** FATAL *** Unable to read units.cfg: {}", err);
             return None;
         },
         Ok(file)  => file,

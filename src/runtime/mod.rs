@@ -1,11 +1,9 @@
-pub mod convert;
-pub mod parse;
-mod state;
-pub mod units;
-
-/* interpret.rs
+/* runtime module
  * ===
- * Houses the command line interpreter and I/O functions of the program.
+ * The runtime module is responsible for the top level interpretation of input and command
+ * execution. This includes I/O routines, though I/O may be separated into a separate submodule
+ * in the future. It shall delegate out to submodules for parsing, loading and maintenance of
+ * statefulness, and subordinate command execution such as actual conversions.
  *
  * This file is a part of:
  *
@@ -24,6 +22,11 @@ pub mod units;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod convert;
+pub mod parse;
+mod state;
+pub mod units;
+
 use std::io;
 use std::io::Read;
 use std::io::BufRead;
@@ -38,6 +41,10 @@ use ::runtime::parse::ConvPrimitive;
 use ::runtime::parse::number::{parse_number_expr, NumberExpr};
 use ::runtime::parse::unit::{parse_unit_expr, UnitExpr};
 use ::runtime::convert::{Conversion, ConversionFmt, ConversionError};
+use runtime::units::UnitDatabase;
+use runtime::state::Options;
+use std::io::Write;
+use runtime::units::config::load_units_list;
 
 static NONLITERAL_RECALL_MSG: &'static str = "recall variables must be literals";
 
@@ -205,7 +212,61 @@ impl SyntaxChecker for LineCheck
     }
 }
 
-pub struct Interpreter<I, O> where I: Read, O:io:: Write
+pub struct Boostrapper
+{
+    units_db: Option<UnitDatabase>,
+    program_state: Option<Options>,
+    //input_stream: Option<>,
+}
+
+impl Boostrapper
+{
+    pub fn create() -> Boostrapper
+    {
+        Bootstrapper
+        {
+            units_db: None,
+            program_state: None,
+        }
+    }
+
+    /**
+     * Loads the units database from the units.cfg file. If the user has a local units.cfg in
+     * $HOME/.yucon/, this is used in place of the default. If the user does NOT have a local
+     * units.cfg / .yucon directory, an attempt will be made to create one and place a copy of
+     * the default into it. The units.cfg file will always be loaded notwithstanding the success
+     * or failure of per-user configurations, unless the default units.cfg file at /etc/yucon/units.cfg
+     * or in the executable path also does not exist.
+     *
+     * This method will automatically inform the user of errors loading / parsing the file. On
+     * successful loading of the units.cfg file, TRUE will be returned.
+     *
+     * @return true on successful load of some units.cfg file. false otherwise.
+     */
+    pub fn load_units_db(&mut self) -> bool
+    {
+        self.units_db = load_units_list();
+        self.units_db == None
+    }
+
+    pub fn parse_opts(&mut self) -> Result<(), InterpretErr>
+    {
+        // TODO handle extra args
+        let (opts, extra_args) = Options::get_opts()?;
+        self.program_state = Some(opts);
+
+        Ok(())
+    }
+
+    /*
+    pub fn get_interpreter(&self) -> Result<Interpreter, String>
+    {
+
+    }
+    */
+}
+
+pub struct Interpreter<I, O> where I: Read, O: io::Write
 {
     pub format: ConversionFmt,
     input_stream: BufReader<I>,
