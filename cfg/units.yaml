@@ -1,0 +1,57 @@
+units:
+    - unit:
+        name: "inch"
+        aliases:
+            - "in"
+        unit_type: Length
+        conversion_factor: 25.4
+        tags:
+            - "us"
+            - "uk"
+
+    - unit:
+        name: "millimetre"
+        aliases:
+            - "millimeter"
+            - "mm"
+        unit_type: Length
+        conversion_factor: 1.0
+        tags:
+            - "si"
+
+    - unit:
+        name: "cubic inch"
+        aliases:
+            - "ci"
+            - "cid"
+            - "in3"
+            - "cu-in"
+        unit_type: Volume
+        conversion_factor: 16.387064
+        dimensions: 3
+        tags:
+            - "us"
+            - "uk"
+
+    - unit:
+        name: "cubic centimetre"
+        aliases:
+            - "cubic centimeter"
+            - "cm3"
+            - "cc"
+        unit_type: Volume
+        conversion_factor: 1.0
+        dimensions: 3
+        tags:
+            - "si"
+
+    - unit:
+        name: "millilitre"
+        aliases:
+            - "ml"
+            - "milliliter"
+            - "cubic centimeter"
+        unit_type: Volume
+        conversion_factor: 16.0
+        tags:
+            - "si"

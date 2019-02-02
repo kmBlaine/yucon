@@ -1,282 +1,85 @@
-/*
- * Yucon - General Purpose Unit Converter
- * Copyright (C) 2016-2017  Blaine Murphy
- *
- * This program is free software: you can redistribute it and/or modify it under the terms
- * of the GNU General Public License as published by the Free Software Foundation, either
- * version 3 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate structopt;
 
-extern crate test;
+extern crate serde;
+extern crate serde_yaml;
+extern crate log4rs;
 
-mod runtime;
-mod utils;
+mod units;
 
-use std::env;
-use std::io::stdin;
-use std::io::stdout;
-use std::fmt::Write;
+use units::UnitDatabase;
+use structopt::StructOpt;
 
-use ::runtime::{Interpreter, InterpretErr};
-use ::runtime::parse::to_conv_primitive;
-use ::runtime::convert::{convert_all, ConversionFmt};
-use ::runtime::units::UnitDatabase;
-use ::runtime::units::config::load_units_list;
-use ::utils::TokenType;
-use test::Options;
 
-static PROGRAM_NAME: &'static str = "\
-YUCON - General Purpose Unit Converter - v0.3";
+#[derive(StructOpt, Debug)]
+#[structopt(
+    name = "yucon",
+    about = "A general purpose unit converter",
+    author = "(C) 2016-2019 Blaine Murphy\nThis is free software licensed under GPL v3+. Use '--license' for more details."
+)]
+struct Options {
+    /// Display conversions in the extended format
+    #[structopt(short = "l", long = "long")]
+    long_formatting: bool,
 
-static COPYRIGHT_MSG: &'static str = "\
-Copyright (C) 2016-2018 Blaine Murphy";
+    /// Prints the license info and exits
+    #[structopt(long = "license")]
+    license: bool,
 
-static HELP_MSG: &'static str = "\
-Usage:
-  yucon [options]
-  yucon [options] <#> <input_unit> <output_unit>
+    /// Input value
+    value: Option<f64>,
+    
+    /// Unit being converted from
+    unit_from: Option<String>,
 
-  In first form, run an interactive session for converting units
-  In second form, perform conversion given on the command line
+    /// Unit to convert into
+    unit_to: Option<String>,
+}
 
-Options:
-  -s         : simple output format. value only
-  -l         : long output format. input / output values and units
-  --help     : show this help message
-  --version  : show version and license info
-
-Examples:
-  Conversion on invocation:
-    $ yucon 1 in mm
-      25.4 mm
-
-  Interactive session with long formatting:
-    $ yucon -l
-
-This is free software licensed under the GNU General Public License v3
-Use \'--version\' for more details";
-
-static VERSION_MSG: &'static str = "\
-\0  Released 01 Sep 2018
+const LICENSE_MESG: &str =
+r"Licensed under the GNU General Public License v3+
+  Released 18 Jan 2019
   Source code available at <https://github.com/kmBlaine/yucon>
   See doc/Changelog.md for version specific details
-  License: GNU Public License v3+
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of GPLv3 or any later version. You should have recieved a copy along
 with this program. If not, see <https://gnu.org/licenses/gpl.html>.
 
-There is NO WARRANTY, to the extent permitted by law. See license for more
-details.
-";
-
-static INTERACTIVE_HELP_MSG: &'static str = "\
-Enter a conversion or a command...
-Conversions:
-  Format: <#> <input_unit> <output_unit>
-
-  #               - value to convert. may be any valid floating point value
-  input_unit      - unit being converted from
-  output_unit     - unit being converted to
-
-Commands:
-  exit            - exit the program
-  help            - print this help message
-  version         - print version and license info
-  <var> [<state>] - view or set program variables. view if no state is specified
-                    set the variable to given state otherwise
-
-Program Variables:
-  format          - output format. may be \'s\', \'d\', or \'l\'
-  value           - recall value for conversions
-  input_unit      - recall for unit being converted from
-  output_unit     - recall for unit being converted to";
-
-static GREETING_MSG: &'static str = "\
-====
-This is free software licensed under the GNU General Public License v3
-Type \'version\' for more details";
-
-
-
-fn line_interpreter(units: &UnitDatabase, opts: &Options)
-{
-    let prompt = "> ".to_string();
-    let mut interpreter: Interpreter<_, _> =
-        Interpreter::using_streams(stdin(), stdout());
-
-    interpreter.format = opts.format;
-    interpreter.publish(&PROGRAM_NAME, &None);
-    interpreter.newline();
-    interpreter.publish(&GREETING_MSG, &None);
-    interpreter.newline();
-    interpreter.publish(&COPYRIGHT_MSG, &None);
-    interpreter.newline();
-    interpreter.newline();
-    interpreter.publish(&"Enter a conversion or a command. Type \'help\' for assistance.", &None);
-    interpreter.newline();
-
-    loop
-    {
-        interpreter.newline();
-        interpreter.publish(&prompt, &None);
-        let cmd_result = interpreter.interpret();
-        let tokens = match cmd_result
-        {
-            Err(cmd_mesg) => {
-                match cmd_mesg
-                {
-                InterpretErr::BlankLine => {
-                    continue;
-                },
-                InterpretErr::ExitSig => {
-                    break;
-                },
-                InterpretErr::HelpSig => {
-                    interpreter.publish(&INTERACTIVE_HELP_MSG, &None);
-                    interpreter.newline();
-                },
-                InterpretErr::VersionSig => {
-                    interpreter.publish(&PROGRAM_NAME, &None);
-                    interpreter.newline();
-                    interpreter.publish(&VERSION_MSG, &None);
-                    interpreter.newline();
-                    interpreter.publish(&COPYRIGHT_MSG, &None);
-                    interpreter.newline();
-                },
-                InterpretErr::CmdSuccess(..) => {
-                    interpreter.publish(&cmd_mesg, &None);
-                    interpreter.newline();
-                }
-                _ => {
-                    interpreter.publish(&cmd_mesg, &Some("Error: ".to_string()));
-                    interpreter.newline();
-                },
-                };
-
-                continue;
-            },
-            Ok(toks) => toks,
-        };
-
-        let mut conv_primitive = match to_conv_primitive(&tokens)
-        {
-            Ok(prim) => prim,
-            Err(err) => {
-                let mut mesg = String::with_capacity(80);
-                write!(mesg, "In token \'{}\': ", tokens[err.failed_at].peek());
-                interpreter.publish(&err, &Some(mesg));
-                interpreter.newline();
-                continue;
-            },
-        };
-
-        match interpreter.perform_recall(&mut conv_primitive)
-        {
-        None => {},
-        Some(err) => {
-            interpreter.publish(&err, &Some("Error: ".to_string()));
-            interpreter.newline();
-            continue;
-        },
-        };
-
-        let mut conversions = convert_all(conv_primitive, units);
-
-        for mut conversion in &mut conversions
-        {
-            conversion.format = interpreter.format;
-            interpreter.publish(&conversion, &None);
-            interpreter.newline();
-        }
-
-        interpreter.update_recall(&conversions);
-    }
-}
+There is NO WARRANTY, to the extent permitted by law. See full license for more
+details.";
 
 fn main() {
-    let units = match load_units_list()
-    {
-    Some(new_units) => new_units,
-    None => {
-        println!("Failed to load units database from file.");
+    let opts = Options::from_args();
+    
+    if opts.license {
+        println!("{}", LICENSE_MESG);
         return;
-    },
-    };
+    }
 
-    let (opts, mut args) = match Options::get_opts()
-    {
-        Ok(results) => results,
+    if opts.value.is_some() {
+        if opts.unit_from.is_none() || opts.unit_to.is_none() {
+            println!("Conversion is incomplete. You must specify a value, unit, and target unit");
+            return;
+        }
+    }
+    match log4rs::init_file("../../cfg/logging.yaml", Default::default()) {
         Err(err) => {
-            match err
-            {
-            InterpretErr::HelpSig => {
-                println!("{}", &PROGRAM_NAME);
-                println!("{}", &HELP_MSG);
-                println!("{}", &COPYRIGHT_MSG);
-            },
-            InterpretErr::VersionSig => {
-                println!("{}", &PROGRAM_NAME);
-                println!("{}", &VERSION_MSG);
-                println!("{}", &COPYRIGHT_MSG);
-            },
-            _ => {
-                println!("Error: {}", err);
-                println!("Use \'--help \' for assistance");
-            },
-            }
+            println!("Error loading the logging configuration: {}", err);
             return;
         },
+        _ => (),
+    }
+    let units_db = match UnitDatabase::load_from_file("../../cfg/units.yaml".to_string(), None) {
+        Some(db) => db,
+        None => {
+            error!("Failed to load units. Exiting");
+            return;
+        }
     };
-
-    if opts.interactive
-    {
-        line_interpreter(&units, &opts);
-    }
-    else
-    {
-        let mut interpreter: Interpreter<_, _> =
-                Interpreter::using_streams(stdin(), stdout());
-
-        interpreter.format = opts.format;
-        let mut args_wrapped: Vec<TokenType> = Vec::with_capacity(3);
-
-        for arg in args.drain(..)
-        {
-            args_wrapped.push(TokenType::Normal(arg));
-        }
-
-        let mut conv_primitive = match to_conv_primitive(&args_wrapped)
-        {
-            Ok(results) => results,
-            Err(err) => {
-                println!("In token \'{}\': {}", args_wrapped[err.failed_at].peek(), err);
-                return;
-            },
-        };
-
-        match interpreter.perform_recall(&mut conv_primitive)
-        {
-        None => {},
-        Some(err) => {
-            println!("Error: {}", err);
-            return;
-        },
-        };
-
-        let mut conversions = convert_all(conv_primitive, &units);
-
-        for mut conversion in &mut conversions
-        {
-            conversion.format = interpreter.format;
-            println!("{}", conversion);
-        }
-    }
+    println!("{:#?}", units_db);
 }

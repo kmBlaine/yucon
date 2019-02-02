@@ -1,0 +1,27 @@
+appenders:
+    cli:
+        kind: console
+        filters:
+            -
+                kind: threshold
+                level: info
+
+        encoder:
+            pattern: "{l} --- {m}{n}"
+    
+    mainFile:
+        kind: file
+        path: "/home/kbm1271/.yucon/yucon.log"
+        filters:
+            -
+                kind: threshold
+                level: trace
+
+        encoder:
+            pattern: "{d(%H:%M:%S)} - {l} [{M}] -- {m}{n}"
+
+root:
+    level: debug
+    appenders:
+        - cli
+        - mainFile
